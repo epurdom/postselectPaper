@@ -1,0 +1,37 @@
+# R
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj.user
+*.o
+*.so
+*.dll
+
+# R package build
+*.tar.gz
+*.zip
+.Rcheck/
+src/*.o
+src/*.so
+src/*.dll
+
+# RStudio
+.Rproj
+
+# docs (if you use pkgdown / quarto)
+docs/
+site/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Optional: uncomment if you use renv
+# renv/
+# renv.lock

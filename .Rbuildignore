@@ -1,0 +1,11 @@
+^\.git
+^\.gitignore
+^\.Rproj\.user
+^\.travis\.yml
+^README\.Rmd$
+^LICENSE\.md$
+^\.github
+^docs
+^data-raw
+^\.quarto
+^_quarto
