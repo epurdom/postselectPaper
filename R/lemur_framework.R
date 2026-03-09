@@ -48,7 +48,7 @@
 #' @importFrom SingleCellExperiment counts
 #' @importFrom SummarizedExperiment colData assay
 #' @importFrom harmony RunHarmony
-#' @importFrom matrixStats rowVars
+#' @importFrom MatrixGenerics rowVars
 #' @export
 prep_aug_sim <- function(pa, config, processed_sim = NULL, num_pcs = 50, verbose = TRUE){
   # Function to print debug info only when verbose is TRUE
@@ -113,7 +113,8 @@ prep_aug_sim <- function(pa, config, processed_sim = NULL, num_pcs = 50, verbose
     # Select highly variable genes if requested
     if(pa$n_hvgs < nrow(sce)){
       debug_print(paste("Selecting top", pa$n_hvgs, "highly variable genes"))
-      hvg <- order(-rowVars(assay(sce, config$assay_continuous)))  # Order genes by variance
+      x <- assay(sce, config$assay_continuous)
+      hvg <- order(-rowVars(x))  # Order genes by variance (MatrixGenerics dispatches on assay type)
       n_hvgs <- min(nrow(sce), pa$n_hvgs)
       sce <- sce[hvg[seq_len(n_hvgs)],]  # Subset to top HVGs
       debug_print(paste("After HVG selection:", nrow(sce), "genes x", ncol(sce), "cells"))
