@@ -20,7 +20,7 @@
 #'
 #' @seealso \code{\link{combine_de_pvals_by_cluster}}, \code{\link{confusion_from_overlap_matrix}}
 #' @importFrom reshape2 melt
-#' @noRd
+#' @export
 per_sim_data_extraction <- function(id_check_single, phen_type_removal, analysis_results_dir, de_outputs_dir, overlap_matrix_prefix, de_pvals_by_cluster_prefix, pa_de_save_prfx, PVE_metrics_save_prfx) {
   pa_de_int_fn <- paste0(analysis_results_dir, pa_de_save_prfx, id_check_single, ".rds")
   pa_de_int <- readRDS(pa_de_int_fn)
@@ -117,7 +117,7 @@ per_sim_data_extraction <- function(id_check_single, phen_type_removal, analysis
 #'
 #' @seealso \code{\link{confusion_from_overlap_matrix}}
 #' @importFrom dplyr group_by summarize
-#' @noRd
+#' @export
 get_conf_metrics_tested_all_hypotheses <- function(master_pwr_table_used, sig_threshold_fixed, p_val_col_name = "adj_p_val", overlap_def = "union", cut_off_true = 0.00, cut_off_false = 0.00) {
   if (overlap_def == "union") {
     denom_overlap_count <- master_pwr_table_used$gt_nbhd_count + master_pwr_table_used$found_cluster_count - master_pwr_table_used$overlap_count
@@ -198,7 +198,7 @@ get_conf_metrics_tested_all_hypotheses <- function(master_pwr_table_used, sig_th
 #'
 #' @seealso \code{\link{get_conf_metrics_tested_all_hypotheses}}, \code{\link{confusion_from_overlap_matrix}}
 #' @importFrom dplyr group_by summarize first
-#' @noRd
+#' @export
 get_conf_metrics_tested_by_gene <- function(master_pwr_table_used, sig_threshold_fixed, screen_p_val_col_name = "adj_p_val", p_val_col_name = "adj_p_val", overlap_def = "union", cut_off_true = 0.00, cut_off_false = 0.00) {
   if (overlap_def == "union") {
     denom_overlap_count <- master_pwr_table_used$gt_nbhd_count + master_pwr_table_used$found_cluster_count - master_pwr_table_used$overlap_count
