@@ -434,6 +434,7 @@ get_de_features <- function(de_by_clust, sig_threshold) {
 #' @return List with \code{full_analysis}, \code{de_table_res}, \code{de_table_res_str}, \code{leiden_de_found_sets}, \code{leiden_de_gt_set}, \code{leiden_non_de_gt_set}, \code{leiden_prop_final_matrix}.
 #'
 #' @importFrom SummarizedExperiment rowData colData
+#' @importFrom stats model.matrix
 #' @export
 run_de_pipeline_from_sce_grouping <- function(curr_sce, leiden_assignment_list, sig_threshold, overlap_type, cut_off_prop_true, cut_off_prop_false, method = "DESeq2") {
   print("Prepping for running the de analysis")
@@ -451,7 +452,7 @@ run_de_pipeline_from_sce_grouping <- function(curr_sce, leiden_assignment_list, 
   
   # prep for getting ground truth de sets
   print("Prepping for getting ground truth de sets")
-  leiden_assignment_matrix <- t(model.matrix(~leiden_assignment_list-1))
+  leiden_assignment_matrix <- t(stats::model.matrix(~leiden_assignment_list-1))
   rownames(leiden_assignment_matrix) <- gsub("leiden_assignment_list", "", rownames(leiden_assignment_matrix))
   leiden_cluster_sets <- lapply(rownames(leiden_assignment_matrix), function(clust_name) {
     colnames(leiden_assignment_matrix)[leiden_assignment_matrix[clust_name,] == 1]

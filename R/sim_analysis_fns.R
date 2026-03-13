@@ -473,6 +473,7 @@ run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm
 #' @importFrom variancePartition fitExtractVarPartModel
 #' @importFrom SingleCellExperiment colData assay
 #' @importFrom S4Vectors DataFrame
+#' @importFrom stats setNames
 #' @export
 get_PVE_of_genes <- function(sce, log_counts_cells, use_pseudobulk = TRUE) {  
   if (use_pseudobulk) {    # Reduces memory usage and computation time for large datasets

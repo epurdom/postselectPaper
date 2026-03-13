@@ -16,7 +16,8 @@ Imports:
     igraph, limma, matrixStats, mclust, muscat, patchwork,
     pbapply, purrr, reshape2, rlang, scuttle, tibble,
     variancePartition,
-    lemur
+    lemur,
+    stats
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

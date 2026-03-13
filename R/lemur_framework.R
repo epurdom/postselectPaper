@@ -49,6 +49,7 @@
 #' @importFrom SummarizedExperiment colData assay
 #' @importFrom harmony RunHarmony
 #' @importFrom MatrixGenerics rowVars
+#' @importFrom stats kmeans rnorm rnbinom runif median
 #' @export
 prep_aug_sim <- function(pa, config, processed_sim = NULL, num_pcs = 50, verbose = TRUE){
   # Function to print debug info only when verbose is TRUE
@@ -282,7 +283,7 @@ create_augmented_data <- function(pa, config, verbose = TRUE){
     debug_print(paste("Running kmeans clustering with k values:", paste(unique(pa$cut_at), collapse=", ")))
     kmeans_clusterings <- lapply(unique(pa$cut_at), function(k){
       debug_print(paste("  Running kmeans with k =", k))
-      kmeans(t(pca_embeds), centers = k, iter.max = 100)$cluster
+      stats::kmeans(t(pca_embeds), centers = k, iter.max = 100)$cluster
     })
     names(kmeans_clusterings) <- as.character(unique(pa$cut_at))
     debug_print("Kmeans clustering complete")
@@ -335,7 +336,7 @@ create_augmented_data <- function(pa, config, verbose = TRUE){
         if ("clustering_method" == "leiden"){
           stop("Leiden clustering not being properly used for DE gene generation")
         }
-        kmeans(t(pca_embeds), centers = n_clusters)$cluster
+        stats::kmeans(t(pca_embeds), centers = n_clusters)$cluster
       }
     }else if(clustering_method == "celltype"){
       celltypes
@@ -359,13 +360,13 @@ create_augmented_data <- function(pa, config, verbose = TRUE){
     
     # Set up log fold change between conditions
     eta_ctrl <- 0
-    eta_trt <- rnorm(1, mean = lfc_mean, sd = lfc_sd)
+    eta_trt <- stats::rnorm(1, mean = lfc_mean, sd = lfc_sd)
     
     # Calculate cell-specific effects:
     # 1. Treatment effect (only applied to cells in the selected cluster & fake_trt)
     trt_eff <- colSums(lemur:::one_hot_encoding(randomization_by_cell)[c("fake_ctrl", "fake_trt"),] * c(eta_ctrl, eta_trt))
 
-    mouse_mean <- rnorm(length(unique(pa$sample)), mean = 0, sd = sample_sd) # create effects for each sample effects
+    mouse_mean <- stats::rnorm(length(unique(pa$sample)), mean = 0, sd = sample_sd) # create effects for each sample effects
     mouse_eff <- colSums(lemur:::one_hot_encoding(pa$sample) * mouse_mean) # add sample effects to each cell
     # 3. Cell size normalization
     # mat_to_sf <- counts(sce)
@@ -374,7 +375,7 @@ create_augmented_data <- function(pa, config, verbose = TRUE){
     
     # Calculate expected counts using negative binomial model
     mu <- 2^(trt_eff * is_de_cell + mouse_eff + base_expr) * pa$sf
-    counts <- rnbinom(n = pa$nc, mu = mu, size = 1/overdispersion)
+    counts <- stats::rnbinom(n = pa$nc, mu = mu, size = 1/overdispersion)
 
     # Return simulation details for tracking
     list(n_clusters = n_clusters, sel_cluster = sel_cluster, is_de_cell = is_de_cell, 
@@ -388,7 +389,7 @@ create_augmented_data <- function(pa, config, verbose = TRUE){
   de_args <- tibble(name = paste0("simulated_gene-", seq_len(pa$n_de_genes)),
                     is_simulated =  TRUE,
                     cut_at = rep_len(pa$cut_at, length.out = pa$n_de_genes),
-                    base_expr = runif(n = pa$n_de_genes, min = -7, max = 3),  # Random base expression
+                    base_expr = stats::runif(n = pa$n_de_genes, min = -7, max = 3),  # Random base expression
                     lfc = rep_len(pa$lfc_mean, length.out = pa$n_de_genes) * sample(c(-1, 1), size = pa$n_de_genes, replace = TRUE),  # Log fold changes
                     sel_cluster = rep(-1, pa$n_de_genes),
                     is_de_cell = purrr::map(seq_len(pa$n_de_genes), function(.) rep(FALSE, pa$nc)))  # Initialize DE cell indicators

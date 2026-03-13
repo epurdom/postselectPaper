@@ -100,6 +100,7 @@ combine_de_pvals_by_cluster <- function(de_pvals_by_cluster, method = "adjust_al
 #' @importFrom foreach %dopar% foreach
 #' @importFrom parallel makeCluster stopCluster
 #' @importFrom doParallel registerDoParallel stopImplicitCluster
+#' @importFrom stats na.omit
 #' @keywords internal
 two_stage_adjustment <- function(de_pvals_by_cluster, screen_method = "min_holm", n_cores = NULL) {
   # Combine all p-values from clusters in a gene by cluster matrix
@@ -133,7 +134,7 @@ two_stage_adjustment <- function(de_pvals_by_cluster, screen_method = "min_holm"
         Tsum <- sum(T * w)
         return(1 - pcauchy(Tsum))
       }
-      combined_pvals <- apply(pval_matrix, 1, function(x) cauchyP(na.omit(x)))
+      combined_pvals <- apply(pval_matrix, 1, function(x) cauchyP(stats::na.omit(x)))
   } else {
     stop("Invalid screen_method specified. Must be one of 'min_holm', 'fisher', or 'cauchy'.")
   }
@@ -187,7 +188,7 @@ two_stage_adjustment <- function(de_pvals_by_cluster, screen_method = "min_holm"
   # print(head(mat_pcg_adj))
   rownames(mat_pcg_adj) <- rownames(pval_matrix)
   colnames(mat_pcg_adj) <- colnames(pval_matrix)
-  res_table <- na.omit(as.data.frame.table(mat_pcg_adj))
+  res_table <- stats::na.omit(as.data.frame.table(mat_pcg_adj))
   names(res_table) <- c("gene", "cluster_id", "adj_p_val_2stage")
   res_table$screen_pval <- combined_pvals[res_table$gene]
   res_table$screen_adj_pval <- screen_pvalues_adj[res_table$gene]
