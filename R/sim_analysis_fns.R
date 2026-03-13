@@ -518,13 +518,14 @@ get_PVE_of_genes <- function(sce, log_counts_cells, use_pseudobulk = TRUE) {
 #' @importFrom limma lmFit eBayes topTable
 #' @importFrom pbapply pbapply
 #' @importFrom SingleCellExperiment colData assay
+#' @importFrom stats model.matrix
 #' @export
 get_tF_genes <- function(sce, log_counts_cells, use_pseudobulk = TRUE) {
     # Cell-level approach (original)
   log_counts_cells <- assay(sce, "logcounts")
   cd <- data.frame(colData(sce))
   f <- ~ sample_id + cluster_id
-  mm <- model.matrix(f, data=cd)
+  mm <- stats::model.matrix(f, data=cd)
   rownames(mm) <- colnames(sce)
   # Progress bar version: use pbapply::pbapply for tqdm-like progress
 
@@ -568,7 +569,7 @@ get_sPBD_genes <- function(sce, use_pseudobulk = TRUE) {
         z <- y[, idx[[k]]]
         gs <- unique(z$fake_condition)
         if (length(gs) == 2) {
-            mm <- model.matrix(~z$fake_condition)
+            mm <- stats::model.matrix(~z$fake_condition)
             z <- edgeR::DGEList(assay(z))
             z <- edgeR::calcNormFactors(z)
             z <- edgeR::estimateDisp(z, mm)

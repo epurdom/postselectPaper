@@ -210,6 +210,7 @@ create_gene_group_mapping <- function(sim_res_DE, set_de_genes) {
 #' @param use_R_tilde If \code{TRUE}, do not use indeterminate in FDP (\code{use_indeterminate = FALSE}).
 #' @return Named vector of metrics per group (e.g. \code{TP_cut_20}, \code{FDP_not_DE}, ...).
 #' @noRd
+#' @importFrom stats setNames
 get_row_metrics_by_gene_group <- function(sim_res_DE, set_de_genes, overlap_matrix, cut_off_true, cut_off_false, sig_threshold, overlap_definition, fdr_calc_type, use_R_tilde) {
   gene_group_mapping <- create_gene_group_mapping(sim_res_DE, set_de_genes)
   sim_res_DE$gene_group <- gene_group_mapping[sim_res_DE$gene]
