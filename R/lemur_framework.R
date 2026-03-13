@@ -50,6 +50,7 @@
 #' @importFrom harmony RunHarmony
 #' @importFrom MatrixGenerics rowVars
 #' @importFrom stats kmeans rnorm rnbinom runif median
+#' @importFrom methods is
 #' @export
 prep_aug_sim <- function(pa, config, processed_sim = NULL, num_pcs = 50, verbose = TRUE){
   # Function to print debug info only when verbose is TRUE
