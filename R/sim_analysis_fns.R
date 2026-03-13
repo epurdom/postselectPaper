@@ -171,7 +171,6 @@ run_pca_harmony_leiden <- function(
 #'     \item \code{assign_size_clust}: Integer vector of cell count per predicted cluster.
 #'   }
 #'
-#' @importFrom stats table
 #' @export
 calc_overlap_mSim <- function(clustering_assignment, reduced_par) {
   gt_clusters <- reduced_par$cd$cluster_id

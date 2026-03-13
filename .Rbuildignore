@@ -9,3 +9,5 @@
 ^data-raw
 ^\.quarto
 ^_quarto
+^.*\.Rproj$
+^\.Rproj\.user$
