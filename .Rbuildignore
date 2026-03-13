@@ -11,3 +11,4 @@
 ^_quarto
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^.*\.gitkeep$

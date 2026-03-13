@@ -387,9 +387,9 @@ create_augmented_data <- function(pa, config, verbose = TRUE){
   debug_print(paste("Setting up parameters for", pa$n_de_genes, "simulated DE genes"))
   de_args <- tibble(name = paste0("simulated_gene-", seq_len(pa$n_de_genes)),
                     is_simulated =  TRUE,
-                    cut_at = rep_len(pa$cut_at, length = pa$n_de_genes),
+                    cut_at = rep_len(pa$cut_at, length.out = pa$n_de_genes),
                     base_expr = runif(n = pa$n_de_genes, min = -7, max = 3),  # Random base expression
-                    lfc = rep_len(pa$lfc_mean, length = pa$n_de_genes) * sample(c(-1, 1), size = pa$n_de_genes, replace = TRUE),  # Log fold changes
+                    lfc = rep_len(pa$lfc_mean, length.out = pa$n_de_genes) * sample(c(-1, 1), size = pa$n_de_genes, replace = TRUE),  # Log fold changes
                     sel_cluster = rep(-1, pa$n_de_genes),
                     is_de_cell = purrr::map(seq_len(pa$n_de_genes), function(.) rep(FALSE, pa$nc)))  # Initialize DE cell indicators
   debug_print("DE gene parameters initialized")

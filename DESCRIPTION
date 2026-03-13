@@ -9,13 +9,14 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports: 
-    MatrixGenerics,
+    MatrixGenerics, methods,
     BiocNeighbors, Matrix, S4Vectors, Seurat,
     SingleCellExperiment, SummarizedExperiment, bluster,
     doParallel, dplyr, edgeR, foreach, ggplot2, harmony,
     igraph, limma, matrixStats, mclust, muscat, patchwork,
     pbapply, purrr, reshape2, rlang, scuttle, tibble,
-    variancePartition
+    variancePartition,
+    lemur
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
