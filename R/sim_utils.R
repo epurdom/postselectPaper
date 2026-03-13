@@ -40,7 +40,7 @@ print_quick_glob_ctrl <- function(anls_res, cut_off_true, cut_off_false, sig_thr
 create_treatment_umap_comparison <- function(umap_kmeans_df, category_var, category_values, save_dir, save_name) {
   plot_list <- list()
 
-  plot_list[[1]] <- ggplot2::ggplot(umap_kmeans_df, ggplot2::aes(x = UMAP1_old, y = UMAP2_old, color = treatment)) +
+  plot_list[[1]] <- ggplot2::ggplot(umap_kmeans_df, ggplot2::aes(x = .data$UMAP1_old, y = .data$UMAP2_old, color = .data$treatment)) +
     ggplot2::geom_point(size = 0.8, alpha = 0.7) +
     ggplot2::theme_classic() +
     ggplot2::labs(title = "All Treatments (Original UMAP)")
@@ -48,13 +48,13 @@ create_treatment_umap_comparison <- function(umap_kmeans_df, category_var, categ
   for (i in seq_along(category_values)) {
     treatment_value <- category_values[i]
     data_subset <- umap_kmeans_df[umap_kmeans_df$treatment == treatment_value, ]
-    plot_list[[i + 1]] <- ggplot2::ggplot(data_subset, ggplot2::aes(x = UMAP1_old, y = UMAP2_old, color = treatment)) +
+    plot_list[[i + 1]] <- ggplot2::ggplot(data_subset, ggplot2::aes(x = .data$UMAP1_old, y = .data$UMAP2_old, color = .data$treatment)) +
       ggplot2::geom_point(size = 0.8, alpha = 0.7) +
       ggplot2::theme_classic() +
       ggplot2::labs(title = paste("Treatment =", treatment_value, "(Original UMAP)"))
   }
 
-  plot_list[[length(category_values) + 2]] <- ggplot2::ggplot(umap_kmeans_df, ggplot2::aes(x = UMAP1, y = UMAP2, color = treatment)) +
+  plot_list[[length(category_values) + 2]] <- ggplot2::ggplot(umap_kmeans_df, ggplot2::aes(x = .data$UMAP1, y = .data$UMAP2, color = .data$treatment)) +
     ggplot2::geom_point(size = 0.8, alpha = 0.7) +
     ggplot2::theme_classic() +
     ggplot2::labs(title = "All Treatments (New UMAP)")
@@ -62,7 +62,7 @@ create_treatment_umap_comparison <- function(umap_kmeans_df, category_var, categ
   for (i in seq_along(category_values)) {
     treatment_value <- category_values[i]
     data_subset <- umap_kmeans_df[umap_kmeans_df$treatment == treatment_value, ]
-    plot_list[[i + length(category_values) + 2]] <- ggplot2::ggplot(data_subset, ggplot2::aes(x = UMAP1, y = UMAP2, color = treatment)) +
+    plot_list[[i + length(category_values) + 2]] <- ggplot2::ggplot(data_subset, ggplot2::aes(x = .data$UMAP1, y = .data$UMAP2, color = .data$treatment)) +
       ggplot2::geom_point(size = 0.8, alpha = 0.7) +
       ggplot2::theme_classic() +
       ggplot2::labs(title = paste("Treatment =", treatment_value, "(New UMAP)"))
