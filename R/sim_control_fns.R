@@ -12,10 +12,7 @@
 #' @return Integer. Number of clusters with at most one condition above the cutoff.
 #'
 #' @export
-get_num_single_cond_clusts <- function(curr_id_check, analysis_type, cut_off_single_cond = 100, file_naming_utils = NULL) {
-  if (is.null(file_naming_utils)) {
-    file_naming_utils <- list(dscrptn_path = dscrptn_path, pa_de_prefix = pa_de_prefix, clustering_prefix = clustering_prefix, anls_patterns = anls_patterns)
-  }
+get_num_single_cond_clusts <- function(curr_id_check, analysis_type, cut_off_single_cond, file_naming_utils) {
   pa_de_int_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$pa_de_prefix, curr_id_check, ".rds")
   pa_de_int <- readRDS(pa_de_int_fn)
 
@@ -45,10 +42,7 @@ get_num_single_cond_clusts <- function(curr_id_check, analysis_type, cut_off_sin
 #'
 #' @importFrom mclust adjustedRandIndex
 #' @export
-get_ref_ari <- function(curr_id_check, analysis_type, ref_analysis_type, file_naming_utils = NULL) {
-  if (is.null(file_naming_utils)) {
-    file_naming_utils <- list(dscrptn_path = dscrptn_path, pa_de_prefix = pa_de_prefix, clustering_prefix = clustering_prefix, anls_patterns = anls_patterns)
-  }
+get_ref_ari <- function(curr_id_check, analysis_type, ref_analysis_type, file_naming_utils) {
   pa_de_int_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$pa_de_prefix, curr_id_check, ".rds")
   pa_de_int <- readRDS(pa_de_int_fn)
 
@@ -85,10 +79,7 @@ get_ref_ari <- function(curr_id_check, analysis_type, ref_analysis_type, file_na
 #'
 #' @importFrom stats chisq.test
 #' @export
-get_chisq_stat <- function(curr_id_check, analysis_type, file_naming_utils = NULL) {
-  if (is.null(file_naming_utils)) {
-    file_naming_utils <- list(dscrptn_path = dscrptn_path, pa_de_prefix = pa_de_prefix, clustering_prefix = clustering_prefix, anls_patterns = anls_patterns)
-  }
+get_chisq_stat <- function(curr_id_check, analysis_type, file_naming_utils) {
   pa_de_int_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$pa_de_prefix, curr_id_check, ".rds")
   pa_de_int <- readRDS(pa_de_int_fn)
 
@@ -160,10 +151,7 @@ get_de_genes_sets_w_overlap <- function(clust_name, cut_off_true, cut_off_false,
 #' @return Numeric. Mean cluster PVE for the top genes.
 #'
 #' @export
-get_avg_top_pve_de_genes <- function(curr_id_check, analysis_type, pct_top_var_genes = 0.5, file_naming_utils = NULL) {
-  if (is.null(file_naming_utils)) {
-    file_naming_utils <- list(dscrptn_path = dscrptn_path, var_fracs_save_prfx = var_fracs_save_prfx, anls_patterns = anls_patterns)
-  }
+get_avg_top_pve_de_genes <- function(curr_id_check, analysis_type, pct_top_var_genes, file_naming_utils) {
   var_fracs_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$var_fracs_save_prfx, file_naming_utils$anls_patterns[[analysis_type]], curr_id_check, ".rds")
   var_fracs <- readRDS(var_fracs_fn)
   var_fracs_sorted <- var_fracs[order(var_fracs$cluster, decreasing = TRUE),]
@@ -187,10 +175,7 @@ get_avg_top_pve_de_genes <- function(curr_id_check, analysis_type, pct_top_var_g
 #' @return List with \code{redundancy_idx} (from \code{cca_anls$Y.redun}) and \code{num_de_found}.
 #'
 #' @export
-get_redundancy_idx <- function(curr_id_check, analysis_type, res_DE, num_genes = 5000, sig_threshold = 0.10, file_naming_utils = NULL) {
-  if (is.null(file_naming_utils)) {
-    file_naming_utils <- list(dscrptn_path = dscrptn_path, cca_anls_save_prfx = cca_anls_save_prfx, anls_patterns = anls_patterns)
-  }
+get_redundancy_idx <- function(curr_id_check, analysis_type, res_DE, num_genes, sig_threshold, file_naming_utils) {
   cca_anls_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$cca_anls_save_prfx, file_naming_utils$anls_patterns[[analysis_type]], curr_id_check, ".rds")
   cca_anls <- readRDS(cca_anls_fn)
 

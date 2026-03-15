@@ -117,6 +117,7 @@ per_sim_data_extraction <- function(id_check_single, phen_type_removal, analysis
 #'
 #' @seealso \code{\link{confusion_from_overlap_matrix}}
 #' @importFrom dplyr group_by summarize
+#' @importFrom rlang .data
 #' @export
 get_conf_metrics_tested_all_hypotheses <- function(master_pwr_table_used, sig_threshold_fixed, p_val_col_name = "adj_p_val", overlap_def = "union", cut_off_true = 0.00, cut_off_false = 0.00) {
   if (overlap_def == "union") {
@@ -153,17 +154,16 @@ get_conf_metrics_tested_all_hypotheses <- function(master_pwr_table_used, sig_th
     master_pwr_table_used$tPVE <- NA_real_
   }
 
-  conf_metrics_tested <-   master_pwr_table_used %>%
-    dplyr::group_by(id_check) %>%
-    dplyr::summarize(
-      TP = sum(TP, na.rm = TRUE),
-      FN = sum(FN, na.rm = TRUE),
-      FP = sum(FP, na.rm = TRUE),
-      FN_all = sum(FN_all, na.rm = TRUE),
-      sPVE_avg_found_DE = if (sum(found_DE, na.rm = TRUE) > 0) mean(sPVE[found_DE], na.rm = TRUE) else NA_real_,
-      tPVE_avg_found_DE = if (sum(found_DE, na.rm = TRUE) > 0) mean(tPVE[found_DE], na.rm = TRUE) else NA_real_,
-      .groups = "drop"
-    )
+  conf_metrics_tested <- dplyr::summarize(
+    dplyr::group_by(master_pwr_table_used, rlang::.data$id_check),
+    TP = sum(rlang::.data$TP, na.rm = TRUE),
+    FN = sum(rlang::.data$FN, na.rm = TRUE),
+    FP = sum(rlang::.data$FP, na.rm = TRUE),
+    FN_all = sum(rlang::.data$FN_all, na.rm = TRUE),
+    sPVE_avg_found_DE = if (sum(rlang::.data$found_DE, na.rm = TRUE) > 0) mean(rlang::.data$sPVE[rlang::.data$found_DE], na.rm = TRUE) else NA_real_,
+    tPVE_avg_found_DE = if (sum(rlang::.data$found_DE, na.rm = TRUE) > 0) mean(rlang::.data$tPVE[rlang::.data$found_DE], na.rm = TRUE) else NA_real_,
+    .groups = "drop"
+  )
   denom_power <- conf_metrics_tested$TP + conf_metrics_tested$FN
   conf_metrics_tested$POWER <- ifelse(denom_power > 0, conf_metrics_tested$TP / denom_power, NA_real_)
   denom_power_all <- conf_metrics_tested$TP + conf_metrics_tested$FN_all
@@ -236,18 +236,17 @@ get_conf_metrics_tested_by_gene <- function(master_pwr_table_used, sig_threshold
 
 
   message("Calculating gene-level confusion metrics - over all clusters for a given simulation and gene")
-  gene_level_agg <- master_pwr_table_used %>%
-    dplyr::group_by(id_check, gene) %>%
-    dplyr::summarize(
-        TP_gene_clust_pair = sum(is_DE & found_DE, na.rm = TRUE), # true positives are genes that are DE and found to be DE
-        FP_gene_clust_pair = sum((!is_DE) & found_DE, na.rm = TRUE), # false positives are genes that are not DE and found to be DE
-        FN_gene_clust_pair = sum(is_DE & (!found_DE), na.rm = TRUE), # false negatives are genes that are DE and not found to be DE
-        FN_gene_clust_pair_all = sum(is_DE_all & (!found_DE), na.rm = TRUE), # false negatives are genes that are DE and not found to be DE
-        min_screen_p_val = min(screen_p_val, na.rm = TRUE), # aggregate the screen p-values by taking min per gene
-        gene_level_null = sum(!is_not_DE) == 0, # if all clusters for a given gene are not DE, then the gene is a null gene (this is null for screen pvalue)
-        num_de_genes = dplyr::first(num_de_genes),
-        .groups = "drop"
-    )
+  gene_level_agg <- dplyr::summarize(
+    dplyr::group_by(master_pwr_table_used, rlang::.data$id_check, rlang::.data$gene),
+    TP_gene_clust_pair = sum(rlang::.data$is_DE & rlang::.data$found_DE, na.rm = TRUE), # true positives are genes that are DE and found to be DE
+    FP_gene_clust_pair = sum((!rlang::.data$is_DE) & rlang::.data$found_DE, na.rm = TRUE), # false positives are genes that are not DE and found to be DE
+    FN_gene_clust_pair = sum(rlang::.data$is_DE & (!rlang::.data$found_DE), na.rm = TRUE), # false negatives are genes that are DE and not found to be DE
+    FN_gene_clust_pair_all = sum(rlang::.data$is_DE_all & (!rlang::.data$found_DE), na.rm = TRUE), # false negatives are genes that are DE and not found to be DE
+    min_screen_p_val = min(rlang::.data$screen_p_val, na.rm = TRUE), # aggregate the screen p-values by taking min per gene
+    gene_level_null = sum(!rlang::.data$is_not_DE) == 0, # if all clusters for a given gene are not DE, then the gene is a null gene (this is null for screen pvalue)
+    num_de_genes = dplyr::first(rlang::.data$num_de_genes),
+    .groups = "drop"
+  )
 
   # defining screen level decisions and TP/FN/FP
   gene_level_agg$screen_rejected_gene <- gene_level_agg$min_screen_p_val <= sig_threshold_fixed
@@ -266,15 +265,14 @@ get_conf_metrics_tested_by_gene <- function(master_pwr_table_used, sig_threshold
   gene_level_agg$FN_gene_level_ov <- (gene_level_agg$T_g > 0) & (gene_level_agg$R_g == 0)
 
   message("Calculating sample level confusion metrics")
-  conf_metrics_tested <- gene_level_agg %>%
-    dplyr::group_by(id_check) %>%
-    dplyr::summarize(
-      ov_TP = sum(TP_gene_level_ov, na.rm = TRUE),
-      ov_FN = sum(FN_gene_level_ov, na.rm = TRUE),
-      ov_FP = sum(FP_gene_level_ov, na.rm = TRUE),
-      num_de_genes = dplyr::first(num_de_genes),
-      .groups = "drop"
-    )
+  conf_metrics_tested <- dplyr::summarize(
+    dplyr::group_by(gene_level_agg, rlang::.data$id_check),
+    ov_TP = sum(rlang::.data$TP_gene_level_ov, na.rm = TRUE),
+    ov_FN = sum(rlang::.data$FN_gene_level_ov, na.rm = TRUE),
+    ov_FP = sum(rlang::.data$FP_gene_level_ov, na.rm = TRUE),
+    num_de_genes = dplyr::first(rlang::.data$num_de_genes),
+    .groups = "drop"
+  )
   denom_ov_power <- conf_metrics_tested$ov_TP + conf_metrics_tested$ov_FN
   conf_metrics_tested$ov_POWER <- ifelse(denom_ov_power > 0, conf_metrics_tested$ov_TP / denom_ov_power, NA_real_)
   denom_ov_fdp <- conf_metrics_tested$ov_FP + conf_metrics_tested$ov_TP

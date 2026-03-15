@@ -297,19 +297,6 @@ create_augmented_data <- function(pa, config, verbose = TRUE){
     kmeans_clusterings <- list()
     kmeans_clusterings[[as.character(pa$cut_at[[1]])]] <- pa$leiden_clusters
     debug_print(paste("Assigned Leiden Clustering to", pa$cut_at[[1]], "clusters"))
-  }else if(clustering_method == "celltype"){ 
-    # Use existing cell type annotations
-    debug_print("Using existing cell type annotations")
-    celltypes <- colData(sce)[[config$cell_type_column]]
-    celltypes[is.na(celltypes)] <- "MISSING_ANNOTATION"  # Handle missing cell types
-    celltype_counts <- table(celltypes)
-    debug_print(paste("Found", length(unique(celltypes)), "cell types"))
-    if(verbose) {
-      debug_print("Cell type distribution:")
-      for(i in 1:length(celltype_counts)) {
-        debug_print(paste("  ", names(celltype_counts)[i], ":", celltype_counts[i], "cells"))
-      }
-    }
   }
   print(paste("List to sample from:", pa$clust_to_sample_from))
 

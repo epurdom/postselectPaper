@@ -43,7 +43,7 @@ cluster_using_leiden <- function(seurat_obj, leiden_res = 0.1, reduction_type = 
 #' @details Stops with an error if \code{reduction_type} is not in \code{seurat_obj@reductions}. Uses \code{mclust::kmeans}.
 #'
 #' @importFrom Seurat Embeddings
-#' @importFrom mclust kmeans
+#' @importFrom stats kmeans
 #' @export
 cluster_using_kmeans <- function(seurat_obj, kmeans_k = 4, reduction_type = "pca") {
   # Existence check for reduction
@@ -51,7 +51,7 @@ cluster_using_kmeans <- function(seurat_obj, kmeans_k = 4, reduction_type = "pca
     stop(paste0("Reduction '", reduction_type, "' not found in the Seurat object."))
   }
   embeds <- Seurat::Embeddings(seurat_obj, reduction = reduction_type)
-  kmeans_assignment_list <- as.factor(mclust::kmeans(embeds, centers = kmeans_k, iter.max = 100)$cluster)
+  kmeans_assignment_list <- as.factor(stats::kmeans(embeds, centers = kmeans_k, iter.max = 100)$cluster)
   kmeans_assignment_list <- factor(paste0("cluster", as.numeric(kmeans_assignment_list)))
   levels(kmeans_assignment_list) <- paste0("cluster", seq_along(levels(kmeans_assignment_list)))
   return(kmeans_assignment_list)
