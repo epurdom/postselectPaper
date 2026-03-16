@@ -31,14 +31,12 @@
 #' @importFrom stats p.adjust pchisq
 #'
 #' @examples
-#' \dontrun{
 #' # Example with mock data
 #' de_pvals_by_cluster <- list(
 #'   cluster1 = data.frame(gene = c("A", "B"), cluster_id = "cluster1", p_val = c(0.01, 0.05)),
 #'   cluster2 = data.frame(gene = c("A", "B"), cluster_id = "cluster2", p_val = c(0.02, 0.03))
 #' )
 #' result <- combine_de_pvals_by_cluster(de_pvals_by_cluster, method = "adjust_all")
-#' }
 combine_de_pvals_by_cluster <- function(de_pvals_by_cluster, method = "adjust_all") {
   method <- match.arg(method, choices = c("adjust_all", "min_per_cluster", "fisher_combined_and_min", "2-stage-fisher", "2-stage-min-holm", "2-stage-cauchy"))
   

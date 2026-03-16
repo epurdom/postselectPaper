@@ -44,7 +44,6 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
 #' # Example usage with simulated data
 #' sim_res_DE <- data.frame(
 #'   gene = c("GENE1", "GENE2", "GENE3"),
@@ -67,7 +66,6 @@
 #'   overlap_type = "union"
 #' )
 #' print(result$metrics)
-#' }
 #' 
 confusion_from_overlap_matrix <- function(sim_res_DE, overlap_matrix,
                                           cut_off_true,
