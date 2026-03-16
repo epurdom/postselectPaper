@@ -327,7 +327,7 @@ create_augmented_data <- function(pa, config, verbose = TRUE){
         stats::kmeans(t(pca_embeds), centers = n_clusters)$cluster
       }
     }else if(clustering_method == "celltype"){
-      celltypes
+      stop("Cell type clustering not implemented for DE gene generation")
     }
     
     # Randomly select one cluster to have DE
