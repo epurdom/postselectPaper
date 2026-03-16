@@ -16,6 +16,8 @@ get_de_gt_set(
 \arguments{
 \item{clust_mat}{Matrix. Cluster membership (rows = clusters, columns = cells).}
 
+\item{nbhd_matrix}{Matrix. DE neighborhood (dimensions compatible with \code{clust_mat \%*\% nbhd_matrix}).}
+
 \item{cut_off_prop_true, cut_off_prop_false}{Numeric. Proportion cut-offs for DE and non-DE.}
 
 \item{gene_list}{Character. Gene names (one per column of the cluster-by-gene proportion matrix).}

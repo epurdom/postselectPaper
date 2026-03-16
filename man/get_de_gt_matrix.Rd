@@ -15,6 +15,9 @@ get_de_gt_matrix(
 \arguments{
 \item{clust_mat}{Matrix. Cluster membership (rows = clusters, columns = cells).}
 
+\item{nbhd_matrix}{Matrix. DE neighborhood; dimensions must align so
+\code{clust_mat \%*\% nbhd_matrix} is clusters x genes.}
+
 \item{cut_off_prop_true, cut_off_prop_false}{Numeric. Proportion thresholds for DE and non-DE.}
 
 \item{overlap_type}{Character. Denominator for proportion: \code{"clust"}, \code{"nbhd"}, or \code{"union"} (default \code{"clust"}).}

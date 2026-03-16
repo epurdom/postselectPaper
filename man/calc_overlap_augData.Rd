@@ -16,7 +16,7 @@ calc_overlap_augData(clustering_assignment, pa_de_int_df, de_args)
 \value{
 A list with:
 \itemize{
-\item \code{cell_count_assign_de_gene}: Matrix \link{DE genes x clusters} of DE cell counts.
+\item \code{cell_count_assign_de_gene}: Matrix of DE cell counts with dimensions DE genes x clusters.
 \item \code{gt_size_de_gene}: Named integer of true DE cell count per gene.
 \item \code{assign_size_clust}: Table of cell counts per predicted cluster.
 }

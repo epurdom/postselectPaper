@@ -7,8 +7,8 @@
 get_num_single_cond_clusts(
   curr_id_check,
   analysis_type,
-  cut_off_single_cond = 100,
-  file_naming_utils = NULL
+  cut_off_single_cond,
+  file_naming_utils
 )
 }
 \arguments{

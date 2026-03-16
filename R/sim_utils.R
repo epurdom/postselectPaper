@@ -323,7 +323,8 @@ get_de_sets <- function(de_by_clust, gene_list, sig_threshold, clust_names) {
 #' DE (proportion >= \code{cut_off_prop_true}) and non-DE (proportion < \code{cut_off_prop_false}).
 #'
 #' @param clust_mat Matrix. Cluster membership (rows = clusters, columns = cells).
-#' @param nbhd_matrix Matrix. DE neighborhood; dimensions must align so \code{clust_mat %*% nbhd_matrix} is clusters x genes.
+#' @param nbhd_matrix Matrix. DE neighborhood; dimensions must align so 
+#' \code{clust_mat \%*\% nbhd_matrix} is clusters x genes.
 #' @param cut_off_prop_true,cut_off_prop_false Numeric. Proportion thresholds for DE and non-DE.
 #' @param overlap_type Character. Denominator for proportion: \code{"clust"}, \code{"nbhd"}, or \code{"union"} (default \code{"clust"}).
 #'
@@ -358,7 +359,7 @@ get_de_gt_matrix <- function(clust_mat, nbhd_matrix, cut_off_prop_true, cut_off_
 #' character vectors of gene names instead of matrices.
 #'
 #' @param clust_mat Matrix. Cluster membership (rows = clusters, columns = cells).
-#' @param nbhd_matrix Matrix. DE neighborhood (dimensions compatible with \code{clust_mat %*% nbhd_matrix}).
+#' @param nbhd_matrix Matrix. DE neighborhood (dimensions compatible with \code{clust_mat \%*\% nbhd_matrix}).
 #' @param cut_off_prop_true,cut_off_prop_false Numeric. Proportion cut-offs for DE and non-DE.
 #' @param gene_list Character. Gene names (one per column of the cluster-by-gene proportion matrix).
 #' @param overlap_type Character. \code{"clust"}, \code{"nbhd"}, or \code{"union"} (default \code{"clust"}).

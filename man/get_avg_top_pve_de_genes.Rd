@@ -7,8 +7,8 @@
 get_avg_top_pve_de_genes(
   curr_id_check,
   analysis_type,
-  pct_top_var_genes = 0.5,
-  file_naming_utils = NULL
+  pct_top_var_genes,
+  file_naming_utils
 )
 }
 \arguments{

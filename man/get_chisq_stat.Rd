@@ -4,7 +4,7 @@
 \alias{get_chisq_stat}
 \title{Chi-squared statistic for condition x cluster contingency table}
 \usage{
-get_chisq_stat(curr_id_check, analysis_type, file_naming_utils = NULL)
+get_chisq_stat(curr_id_check, analysis_type, file_naming_utils)
 }
 \arguments{
 \item{curr_id_check}{Character. Run ID.}

@@ -14,7 +14,7 @@ calc_overlap_mSim(clustering_assignment, reduced_par)
 \value{
 A list with:
 \itemize{
-\item \code{cell_count_assign_de_gene}: Matrix \link{DE genes x predicted clusters} of cell counts.
+\item \code{cell_count_assign_de_gene}: Matrix  of cell counts with dimensions DE genes x predicted clusters.
 \item \code{gt_size_de_gene}: Integer vector of true cluster size per DE gene.
 \item \code{assign_size_clust}: Integer vector of cell count per predicted cluster.
 }

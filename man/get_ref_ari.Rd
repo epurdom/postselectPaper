@@ -4,12 +4,7 @@
 \alias{get_ref_ari}
 \title{Adjusted Rand Index between current and reference clustering}
 \usage{
-get_ref_ari(
-  curr_id_check,
-  analysis_type,
-  ref_analysis_type,
-  file_naming_utils = NULL
-)
+get_ref_ari(curr_id_check, analysis_type, ref_analysis_type, file_naming_utils)
 }
 \arguments{
 \item{curr_id_check}{Character. Run ID.}

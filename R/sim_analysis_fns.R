@@ -166,7 +166,7 @@ run_pca_harmony_leiden <- function(
 #'
 #' @return A list with:
 #'   \itemize{
-#'     \item \code{cell_count_assign_de_gene}: Matrix [DE genes x predicted clusters] of cell counts.
+#'     \item \code{cell_count_assign_de_gene}: Matrix  of cell counts with dimensions DE genes x predicted clusters.
 #'     \item \code{gt_size_de_gene}: Integer vector of true cluster size per DE gene.
 #'     \item \code{assign_size_clust}: Integer vector of cell count per predicted cluster.
 #'   }
@@ -229,7 +229,7 @@ calc_overlap_mSim <- function(clustering_assignment, reduced_par) {
 #'
 #' @return A list with:
 #'   \itemize{
-#'     \item \code{cell_count_assign_de_gene}: Matrix [DE genes x clusters] of DE cell counts.
+#'     \item \code{cell_count_assign_de_gene}: Matrix of DE cell counts with dimensions DE genes x clusters.
 #'     \item \code{gt_size_de_gene}: Named integer of true DE cell count per gene.
 #'     \item \code{assign_size_clust}: Table of cell counts per predicted cluster.
 #'   }
@@ -382,7 +382,8 @@ run_mSim_type_DE_analysis <- function(sce, cluster_id_col, sample_id_col, group_
 #'
 #' @return A list with \code{res_DE} (DE table) and \code{de_overlap_info} (overlap list).
 #'
-#' @importFrom SingleCellExperiment rowData colData assay
+#' @importFrom SingleCellExperiment rowData colData
+#' @importFrom SummarizedExperiment assay
 #' @export
 run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm_counts, used_sce, pa_de, sim_type,
                                       curr_anls, new_id_check, file_naming_utils,
@@ -471,7 +472,8 @@ run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm
 #'
 #' @importFrom scuttle aggregateAcrossCells logNormCounts
 #' @importFrom variancePartition fitExtractVarPartModel
-#' @importFrom SingleCellExperiment colData assay
+#' @importFrom SingleCellExperiment colData
+#' @importFrom SummarizedExperiment assay
 #' @importFrom S4Vectors DataFrame
 #' @importFrom stats setNames
 #' @export
@@ -517,7 +519,8 @@ get_PVE_of_genes <- function(sce, log_counts_cells, use_pseudobulk = TRUE) {
 #'
 #' @importFrom limma lmFit eBayes topTable
 #' @importFrom pbapply pbapply
-#' @importFrom SingleCellExperiment colData assay
+#' @importFrom SingleCellExperiment colData
+#' @importFrom SummarizedExperiment assay
 #' @importFrom stats model.matrix
 #' @export
 get_tF_genes <- function(sce, log_counts_cells, use_pseudobulk = TRUE) {
@@ -559,7 +562,8 @@ get_tF_genes <- function(sce, log_counts_cells, use_pseudobulk = TRUE) {
 #' @importFrom scuttle aggregateAcrossCells
 #' @importFrom edgeR DGEList calcNormFactors estimateDisp glmQLFit glmQLFTest topTags
 #' @importFrom pbapply pblapply
-#' @importFrom SingleCellExperiment colData assay
+#' @importFrom SingleCellExperiment colData
+#' @importFrom SummarizedExperiment assay
 #' @export
 get_sPBD_genes <- function(sce, use_pseudobulk = TRUE) {
   ids <- SingleCellExperiment::colData(sce)[c("sample_id", "cluster_id")]

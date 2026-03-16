@@ -8,9 +8,9 @@ get_redundancy_idx(
   curr_id_check,
   analysis_type,
   res_DE,
-  num_genes = 5000,
-  sig_threshold = 0.1,
-  file_naming_utils = NULL
+  num_genes,
+  sig_threshold,
+  file_naming_utils
 )
 }
 \arguments{
