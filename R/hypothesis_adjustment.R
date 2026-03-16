@@ -42,10 +42,6 @@ combine_de_pvals_by_cluster <- function(de_pvals_by_cluster, method = "adjust_al
   
   if (method == "adjust_all") {
     return(adjust_all_pvals(de_pvals_by_cluster))
-  } else if (method == "min_per_cluster") {
-    return(min_per_cluster_pvals(de_pvals_by_cluster))
-  } else if (method == "fisher_combined_and_min") {
-    return(fisher_combined_pvals_and_min(de_pvals_by_cluster))
   } else if (method == "2-stage-fisher") {
     print("Adjusting p-values using 2-stage procedure with fisher screening")
     res_table_to_return <- two_stage_adjustment(de_pvals_by_cluster, screen_method = "fisher")
@@ -70,6 +66,8 @@ combine_de_pvals_by_cluster <- function(de_pvals_by_cluster, method = "adjust_al
     res_table_to_return$gene <- as.character(res_table_to_return$gene)
     res_table_to_return$cluster_id <- as.character(res_table_to_return$cluster_id)
     return(res_table_to_return)
+  } else {
+    stop("Invalid method specified. Must be one of 'adjust_all', '2-stage-fisher', '2-stage-min-holm', or '2-stage-cauchy'.")
   }
 }
 
