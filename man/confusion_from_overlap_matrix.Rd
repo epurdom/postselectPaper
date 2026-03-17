@@ -67,7 +67,6 @@ true positives (TP), false positives (FP), false discovery proportion (FDP),
 power, etc.
 }
 \examples{
-\dontrun{
 # Example usage with simulated data
 sim_res_DE <- data.frame(
   gene = c("GENE1", "GENE2", "GENE3"),
@@ -90,6 +89,5 @@ result <- confusion_from_overlap_matrix(
   overlap_type = "union"
 )
 print(result$metrics)
-}
 
 }

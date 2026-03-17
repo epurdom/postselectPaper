@@ -37,12 +37,10 @@ taking the minimum p-value per cluster, or using Fisher's combined probability
 test with minimum selection.
 }
 \examples{
-\dontrun{
 # Example with mock data
 de_pvals_by_cluster <- list(
   cluster1 = data.frame(gene = c("A", "B"), cluster_id = "cluster1", p_val = c(0.01, 0.05)),
   cluster2 = data.frame(gene = c("A", "B"), cluster_id = "cluster2", p_val = c(0.02, 0.03))
 )
 result <- combine_de_pvals_by_cluster(de_pvals_by_cluster, method = "adjust_all")
-}
 }

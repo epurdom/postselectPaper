@@ -7,16 +7,20 @@
 #' @param curr_id_check Character. Run ID used in file names.
 #' @param analysis_type Character. Key into \code{anls_patterns} (e.g. \code{harmony_}).
 #' @param cut_off_single_cond Numeric. Minimum cells per condition to count cluster as "both conditions" (default \code{100}).
-#' @param file_naming_utils Optional list with \code{dscrptn_path}, \code{pa_de_prefix}, \code{clustering_prefix}, \code{anls_patterns}. If \code{NULL}, these are read from the calling environment.
+#' @param anls_info_dir Character. Directory for analysis RDS files.
+#' @param pa_de_save_prfx Character. Prefix for \code{pa_de} RDS filenames.
+#' @param clustering_prefix Character. Prefix for cluster assignment RDS filenames.
+#' @param anls_patterns Named list. Maps \code{analysis_type} to filename infix.
 #'
 #' @return Integer. Number of clusters with at most one condition above the cutoff.
 #'
 #' @export
-get_num_single_cond_clusts <- function(curr_id_check, analysis_type, cut_off_single_cond, file_naming_utils) {
-  pa_de_int_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$pa_de_prefix, curr_id_check, ".rds")
+get_num_single_cond_clusts <- function(curr_id_check, analysis_type, cut_off_single_cond,
+    anls_info_dir, pa_de_save_prfx, clustering_prefix, anls_patterns) {
+  pa_de_int_fn <- paste0(anls_info_dir, pa_de_save_prfx, curr_id_check, ".rds")
   pa_de_int <- readRDS(pa_de_int_fn)
 
-  cluster_assignment_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$clustering_prefix, file_naming_utils$anls_patterns[[analysis_type]], curr_id_check, ".rds")
+  cluster_assignment_fn <- paste0(anls_info_dir, clustering_prefix, anls_patterns[[analysis_type]], curr_id_check, ".rds")
   cluster_assignment <- readRDS(cluster_assignment_fn)
 
   fake_condition_fn <- pa_de_int$fake_condition_fn
@@ -36,17 +40,21 @@ get_num_single_cond_clusts <- function(curr_id_check, analysis_type, cut_off_sin
 #' @param curr_id_check Character. Run ID.
 #' @param analysis_type Character. Key for current clustering in \code{anls_patterns}.
 #' @param ref_analysis_type Character. \code{"gt"} for ground truth, or key for reference clustering in \code{anls_patterns}.
-#' @param file_naming_utils Optional list with \code{dscrptn_path}, \code{pa_de_prefix}, \code{clustering_prefix}, \code{anls_patterns}. If \code{NULL}, read from the calling environment.
+#' @param anls_info_dir Character. Directory for analysis RDS files.
+#' @param pa_de_save_prfx Character. Prefix for \code{pa_de} RDS filenames.
+#' @param clustering_prefix Character. Prefix for cluster assignment RDS filenames.
+#' @param anls_patterns Named list. Maps analysis type to filename infix.
 #'
 #' @return Numeric. ARI from \code{mclust::adjustedRandIndex}.
 #'
 #' @importFrom mclust adjustedRandIndex
 #' @export
-get_ref_ari <- function(curr_id_check, analysis_type, ref_analysis_type, file_naming_utils) {
-  pa_de_int_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$pa_de_prefix, curr_id_check, ".rds")
+get_ref_ari <- function(curr_id_check, analysis_type, ref_analysis_type,
+    anls_info_dir, pa_de_save_prfx, clustering_prefix, anls_patterns) {
+  pa_de_int_fn <- paste0(anls_info_dir, pa_de_save_prfx, curr_id_check, ".rds")
   pa_de_int <- readRDS(pa_de_int_fn)
 
-  cluster_assignment_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$clustering_prefix, file_naming_utils$anls_patterns[[analysis_type]], curr_id_check, ".rds")
+  cluster_assignment_fn <- paste0(anls_info_dir, clustering_prefix, anls_patterns[[analysis_type]], curr_id_check, ".rds")
   cluster_assignment <- readRDS(cluster_assignment_fn)
 
   if (ref_analysis_type == "gt") {
@@ -57,7 +65,7 @@ get_ref_ari <- function(curr_id_check, analysis_type, ref_analysis_type, file_na
     reduced_par <- readRDS(reduced_par_list_fn)
     cluster_assignment_ref <- reduced_par$cd$cluster_id
   } else {
-    cluster_assignment_ref_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$clustering_prefix, file_naming_utils$anls_patterns[[ref_analysis_type]], curr_id_check, ".rds")
+    cluster_assignment_ref_fn <- paste0(anls_info_dir, clustering_prefix, anls_patterns[[ref_analysis_type]], curr_id_check, ".rds")
     cluster_assignment_ref <- readRDS(cluster_assignment_ref_fn)
   }
 
@@ -73,17 +81,20 @@ get_ref_ari <- function(curr_id_check, analysis_type, ref_analysis_type, file_na
 #'
 #' @param curr_id_check Character. Run ID.
 #' @param analysis_type Character. Key for \code{anls_patterns}.
-#' @param file_naming_utils Optional list with \code{dscrptn_path}, \code{pa_de_prefix}, \code{clustering_prefix}, \code{anls_patterns}. If \code{NULL}, read from the calling environment.
+#' @param anls_info_dir Character. Directory for analysis RDS files.
+#' @param pa_de_save_prfx Character. Prefix for \code{pa_de} RDS filenames.
+#' @param clustering_prefix Character. Prefix for cluster assignment RDS filenames.
+#' @param anls_patterns Named list. Maps \code{analysis_type} to filename infix.
 #'
 #' @return Numeric. \code{chisq.test(cont_table)$statistic}.
 #'
 #' @importFrom stats chisq.test
 #' @export
-get_chisq_stat <- function(curr_id_check, analysis_type, file_naming_utils) {
-  pa_de_int_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$pa_de_prefix, curr_id_check, ".rds")
+get_chisq_stat <- function(curr_id_check, analysis_type, anls_info_dir, pa_de_save_prfx, clustering_prefix, anls_patterns) {
+  pa_de_int_fn <- paste0(anls_info_dir, pa_de_save_prfx, curr_id_check, ".rds")
   pa_de_int <- readRDS(pa_de_int_fn)
 
-  cluster_assignment_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$clustering_prefix, file_naming_utils$anls_patterns[[analysis_type]], curr_id_check, ".rds")
+  cluster_assignment_fn <- paste0(anls_info_dir, clustering_prefix, anls_patterns[[analysis_type]], curr_id_check, ".rds")
   cluster_assignment <- readRDS(cluster_assignment_fn)
 
   fake_condition_fn <- pa_de_int$fake_condition_fn
@@ -146,13 +157,16 @@ get_de_genes_sets_w_overlap <- function(clust_name, cut_off_true, cut_off_false,
 #' @param curr_id_check Character. Run ID.
 #' @param analysis_type Character. Key for \code{anls_patterns}.
 #' @param pct_top_var_genes Numeric. Fraction of genes (by rank) to average (default \code{0.5}).
-#' @param file_naming_utils Optional list with \code{dscrptn_path}, \code{var_fracs_save_prfx}, \code{anls_patterns}. If \code{NULL}, read from the calling environment.
+#' @param anls_info_dir Character. Directory for analysis RDS files.
+#' @param var_fracs_save_prfx Character. Prefix for variance-fractions RDS filenames.
+#' @param anls_patterns Named list. Maps \code{analysis_type} to filename infix.
 #'
 #' @return Numeric. Mean cluster PVE for the top genes.
 #'
 #' @export
-get_avg_top_pve_de_genes <- function(curr_id_check, analysis_type, pct_top_var_genes, file_naming_utils) {
-  var_fracs_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$var_fracs_save_prfx, file_naming_utils$anls_patterns[[analysis_type]], curr_id_check, ".rds")
+get_avg_top_pve_de_genes <- function(curr_id_check, analysis_type, pct_top_var_genes,
+    anls_info_dir, var_fracs_save_prfx, anls_patterns) {
+  var_fracs_fn <- paste0(anls_info_dir, var_fracs_save_prfx, anls_patterns[[analysis_type]], curr_id_check, ".rds")
   var_fracs <- readRDS(var_fracs_fn)
   var_fracs_sorted <- var_fracs[order(var_fracs$cluster, decreasing = TRUE),]
   num_top_var_genes <- round(pct_top_var_genes*nrow(var_fracs_sorted))
@@ -170,13 +184,16 @@ get_avg_top_pve_de_genes <- function(curr_id_check, analysis_type, pct_top_var_g
 #' @param res_DE List. Per-cluster DE result tables (must have \code{p_adj.glb} and \code{gene}).
 #' @param num_genes Unused; kept for interface compatibility.
 #' @param sig_threshold Numeric. FDR threshold for counting DE genes (default \code{0.10}).
-#' @param file_naming_utils Optional list with \code{dscrptn_path}, \code{cca_anls_save_prfx}, \code{anls_patterns}. If \code{NULL}, read from the calling environment.
+#' @param anls_info_dir Character. Directory for analysis RDS files.
+#' @param cca_anls_save_prfx Character. Prefix for CCA analysis RDS filenames.
+#' @param anls_patterns Named list. Maps \code{analysis_type} to filename infix.
 #'
 #' @return List with \code{redundancy_idx} (from \code{cca_anls$Y.redun}) and \code{num_de_found}.
 #'
 #' @export
-get_redundancy_idx <- function(curr_id_check, analysis_type, res_DE, num_genes, sig_threshold, file_naming_utils) {
-  cca_anls_fn <- paste0(file_naming_utils$dscrptn_path, file_naming_utils$cca_anls_save_prfx, file_naming_utils$anls_patterns[[analysis_type]], curr_id_check, ".rds")
+get_redundancy_idx <- function(curr_id_check, analysis_type, res_DE, num_genes, sig_threshold,
+    anls_info_dir, cca_anls_save_prfx, anls_patterns) {
+  cca_anls_fn <- paste0(anls_info_dir, cca_anls_save_prfx, anls_patterns[[analysis_type]], curr_id_check, ".rds")
   cca_anls <- readRDS(cca_anls_fn)
 
   # get number of DE genes found for comparison

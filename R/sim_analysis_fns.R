@@ -362,10 +362,7 @@ run_mSim_type_DE_analysis <- function(sce, cluster_id_col, sample_id_col, group_
 #' Saves cluster assignment and overlap info to RDS, runs pseudobulk DE via
 #' \code{\link{run_mSim_type_DE_analysis}}, adjusts p-values with
 #' \code{\link{adjust_all_pvals}}, and optionally runs and saves PVE with
-#' \code{\link{get_PVE_of_genes}}. \code{file_naming_utils} must contain
-#' \code{anls_info_dir}, \code{des_dir}, \code{clustering_prefix},
-#' \code{de_overlap_info_save_prfx}, \code{res_de_save_prfx},
-#' \code{PVE_metrics_save_prfx}, \code{anls_patterns}.
+#' \code{\link{get_PVE_of_genes}}.
 #'
 #' @param clustering_assignment_curr_anls Factor. Cluster assignment per cell.
 #' @param lblnorm_counts Matrix. Log-normalized counts (for PVE when \code{run_PVE} is \code{TRUE}).
@@ -374,7 +371,13 @@ run_mSim_type_DE_analysis <- function(sce, cluster_id_col, sample_id_col, group_
 #' @param sim_type \code{"mSim"} or \code{"augData"}.
 #' @param curr_anls Character. Analysis label (e.g. \code{harmony_}, \code{noharm_}).
 #' @param new_id_check Character. Run ID used in file names.
-#' @param file_naming_utils List. Paths and save prefixes (see description).
+#' @param anls_info_dir Character. Directory for intermediate analysis RDS files.
+#' @param des_dir Character. Directory for final DE result RDS files.
+#' @param clustering_prefix Character. Prefix for cluster assignment RDS filenames.
+#' @param de_overlap_info_save_prfx Character. Prefix for overlap info RDS filenames.
+#' @param res_de_save_prfx Character. Prefix for DE result RDS filenames.
+#' @param PVE_metrics_save_prfx Character. Prefix for PVE metrics RDS filenames.
+#' @param anls_patterns Named list. Maps analysis label (e.g. \code{curr_anls}) to filename infix.
 #' @param cut_off_true,cut_off_false Numeric. Reserved for downstream use; not used here.
 #' @param sig_threshold Numeric. Threshold for adjusted p-value to define DE genes.
 #' @param overlap_type Unused; kept for interface compatibility.
@@ -386,23 +389,25 @@ run_mSim_type_DE_analysis <- function(sce, cluster_id_col, sample_id_col, group_
 #' @importFrom SummarizedExperiment assay
 #' @export
 run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm_counts, used_sce, pa_de, sim_type,
-                                      curr_anls, new_id_check, file_naming_utils,
+                                      curr_anls, new_id_check,
+                                      anls_info_dir, des_dir, clustering_prefix, de_overlap_info_save_prfx,
+                                      res_de_save_prfx, PVE_metrics_save_prfx, anls_patterns,
                                       cut_off_true, cut_off_false, sig_threshold, overlap_type, run_PVE = FALSE) {
 
   print(paste0("Running analysis for clustering: ", curr_anls))
-  saveRDS(clustering_assignment_curr_anls, file.path(file_naming_utils$anls_info_dir, paste0(file_naming_utils$clustering_prefix, file_naming_utils$anls_patterns[[curr_anls]], new_id_check, ".rds")))
+  saveRDS(clustering_assignment_curr_anls, file.path(anls_info_dir, paste0(clustering_prefix, anls_patterns[[curr_anls]], new_id_check, ".rds")))
   print("Calculating de overlap info")
   de_overlap_info_curr_anls <- calc_overlap(clustering_assignment_curr_anls, used_sce, pa_de, sim_type)
-  saveRDS(de_overlap_info_curr_anls, file.path(file_naming_utils$anls_info_dir, paste0(file_naming_utils$de_overlap_info_save_prfx, file_naming_utils$anls_patterns[[curr_anls]], new_id_check, ".rds")))
+  saveRDS(de_overlap_info_curr_anls, file.path(anls_info_dir, paste0(de_overlap_info_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds")))
 
   print("Running de analysis")
   used_sce$data_cluster <- clustering_assignment_curr_anls
   res_de_curr_anls <- run_mSim_type_DE_analysis(used_sce, "data_cluster", "sample", "fake_condition", method = "edgeR")
-  saveRDS(res_de_curr_anls, file.path(file_naming_utils$des_dir, paste0(file_naming_utils$res_de_save_prfx, file_naming_utils$anls_patterns[[curr_anls]], new_id_check, ".rds")))
+  saveRDS(res_de_curr_anls, file.path(des_dir, paste0(res_de_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds")))
   combined_sim_res_DE_tested <- adjust_all_pvals(res_de_curr_anls)
   gene_clusts_DE <- combined_sim_res_DE_tested[combined_sim_res_DE_tested$adj_p_val < sig_threshold, ]
   genes_DE <- unique(combined_sim_res_DE_tested$gene)[1:100]
-  
+
   if (run_PVE) {
     used_sce$cluster_id <- clustering_assignment_curr_anls
     start_time <- Sys.time()
@@ -410,7 +415,7 @@ run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm
     end_time <- Sys.time()
     print(paste0("Time taken to run PVE analysis: ", end_time - start_time))
 
-    saveRDS(pve_results, file.path(file_naming_utils$anls_info_dir, paste0(file_naming_utils$PVE_metrics_save_prfx, file_naming_utils$anls_patterns[[curr_anls]], new_id_check, ".rds")))
+    saveRDS(pve_results, file.path(anls_info_dir, paste0(PVE_metrics_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds")))
   }
   
    ###### first attempt at PCA_Variance_Explained analysis
@@ -604,25 +609,26 @@ get_sPBD_genes <- function(sce, use_pseudobulk = TRUE) {
 #'
 #' Computes PVE (type and state) via \code{\link{get_PVE_of_genes}}, ranks genes
 #' by \code{rank(tPVE) - rank(sPVE)}, and returns the top
-#' \code{num_genes_for_TvsS_clustering} genes. Saves PVE metrics to
-#' \code{file_naming_utils$anls_info_dir}.
+#' \code{num_genes_for_TvsS_clustering} genes. Saves PVE metrics to \code{anls_info_dir}.
 #'
 #' @param used_sce \code{SingleCellExperiment}. \code{cluster_id} is set from \code{clust_results$cluster_assignment_list} inside the function.
 #' @param clust_results List with \code{cluster_assignment_list} and \code{lblnorm_counts}.
 #' @param num_genes_for_TvsS_clustering Number of top type-over-state genes to return.
 #' @param new_id_check Run ID used when saving PVE RDS.
-#' @param file_naming_utils List with \code{anls_info_dir} and \code{PVE_metrics_save_prfx}.
+#' @param anls_info_dir Character. Directory for intermediate analysis RDS files.
+#' @param PVE_metrics_save_prfx Character. Prefix for PVE metrics RDS filenames.
 #' @param use_pseudobulk_TvsS Passed to \code{\link{get_PVE_of_genes}} (default \code{TRUE}).
 #'
 #' @return Character vector of gene names (top type-over-state genes).
 #'
 #' @importFrom SingleCellExperiment colData
 #' @export
-find_TvsS_genes <- function(used_sce, clust_results, num_genes_for_TvsS_clustering, new_id_check, file_naming_utils, use_pseudobulk_TvsS = TRUE) {
+find_TvsS_genes <- function(used_sce, clust_results, num_genes_for_TvsS_clustering, new_id_check,
+    anls_info_dir, PVE_metrics_save_prfx, use_pseudobulk_TvsS = TRUE) {
   used_sce$cluster_id <- clust_results$cluster_assignment_list
   log_counts_cells <- clust_results$lblnorm_counts
   PVE_metrics <- get_PVE_of_genes(used_sce, log_counts_cells, use_pseudobulk = use_pseudobulk_TvsS)
-  saveRDS(PVE_metrics, file.path(file_naming_utils$anls_info_dir, paste0(file_naming_utils$PVE_metrics_save_prfx, new_id_check, ".rds")))
+  saveRDS(PVE_metrics, file.path(anls_info_dir, paste0(PVE_metrics_save_prfx, new_id_check, ".rds")))
   # sPBD_metrics <- get_sPBD_genes(used_sce, use_pseudobulk = use_pseudobulk_TvsS)
   type_metric <- PVE_metrics$tPVE
   state_metric <- PVE_metrics$sPVE

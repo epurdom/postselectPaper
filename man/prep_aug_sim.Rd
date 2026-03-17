@@ -4,26 +4,51 @@
 \alias{prep_aug_sim}
 \title{Prepare data for augmented simulation}
 \usage{
-prep_aug_sim(pa, config, processed_sim = NULL, num_pcs = 50, verbose = TRUE)
+prep_aug_sim(
+  seed = NULL,
+  randomization,
+  clustering,
+  cut_at = NA_real_,
+  lfc_mean = NA_real_,
+  n_hvgs,
+  datapath = NULL,
+  dest_file = NULL,
+  condition = NULL,
+  use_harmony,
+  leiden_resolution = NULL,
+  leiden_clusters = NULL,
+  config,
+  processed_sim = NULL,
+  num_pcs = 50,
+  verbose = TRUE
+)
 }
 \arguments{
-\item{pa}{A list of simulation parameters. Required/optional elements:
-\itemize{
-\item \code{seed}: (optional) Random seed for reproducibility.
-\item \code{randomization}: \code{"cells"} or \code{"samples"} for fake treatment/control assignment.
-\item \code{clustering}: \code{"graph"}, \code{"kmeans"}, \code{"celltype"}, or \code{"leiden"} for gene-neighborhood clusters.
-\item \code{cut_at}: Numeric vector of cluster sizes (e.g. \code{c(1, 3, 10)}). Ignored for \code{leiden}.
-\item \code{lfc_mean}: Numeric (or vector) mean log fold change for simulated DE genes.
-\item \code{n_hvgs}: Number of highly variable genes to keep (from real data).
-\item \code{datapath}: Path to input file (RDS SingleCellExperiment) when \code{processed_sim} is \code{NULL}.
-\item \code{dest_file}: (optional) Path to save the processed Seurat object.
-\item \code{condition}: (optional) Value(s) of \code{config$main_covariate} to filter cells; if \code{NULL}, all cells used.
-\item \code{use_harmony}: Whether to run Harmony batch correction.
-\item \code{leiden_resolution}: (optional) Resolution for Leiden when \code{clustering == "leiden"}.
-\item \code{leiden_clusters}: (optional) Precomputed Leiden cluster labels when \code{clustering == "leiden"}.
-}}
+\item{seed}{Optional integer. Random seed for reproducibility. If \code{NULL}, seed is not set.}
 
-\item{config}{A list of data configuration:
+\item{randomization}{Character. \code{"cells"} or \code{"samples"} for fake treatment/control assignment.}
+
+\item{clustering}{Character. \code{"graph"}, \code{"kmeans"}, \code{"celltype"}, or \code{"leiden"} for gene-neighborhood clusters.}
+
+\item{cut_at}{Numeric vector. Cluster sizes (e.g. \code{c(1, 3, 10)}). Use \code{NA} to get default \code{c(1, 3, 10)}. Ignored for \code{leiden}.}
+
+\item{lfc_mean}{Numeric or vector. Mean log fold change for simulated DE genes. Use \code{NA} for default \code{1.5}.}
+
+\item{n_hvgs}{Integer. Number of highly variable genes to keep (from real data). Required when \code{processed_sim} is \code{NULL}.}
+
+\item{datapath}{Character. Path to input RDS (SingleCellExperiment). Required when \code{processed_sim} is \code{NULL}.}
+
+\item{dest_file}{Optional character. Path to save the processed Seurat object. If \code{NULL}, object is not saved.}
+
+\item{condition}{Optional character vector. Value(s) of \code{config$main_covariate} to filter cells; if \code{NULL}, all cells used.}
+
+\item{use_harmony}{Logical. Whether to run Harmony batch correction.}
+
+\item{leiden_resolution}{Optional numeric. Resolution for Leiden when \code{clustering == "leiden"}.}
+
+\item{leiden_clusters}{Optional integer vector. Precomputed Leiden cluster labels when \code{clustering == "leiden"}.}
+
+\item{config}{List of data configuration:
 \itemize{
 \item \code{main_covariate}: Name of condition/treatment column in \code{colData}.
 \item \code{sample_covariate}: Name of sample column.
@@ -34,12 +59,12 @@ prep_aug_sim(pa, config, processed_sim = NULL, num_pcs = 50, verbose = TRUE)
 
 \item{processed_sim}{Optional pre-processed Seurat object; if provided, \code{datapath} is not used.}
 
-\item{num_pcs}{Number of principal components to compute (default \code{50}).}
+\item{num_pcs}{Integer. Number of principal components to compute (default \code{50}).}
 
-\item{verbose}{If \code{TRUE}, print debug messages (default \code{TRUE}).}
+\item{verbose}{Logical. If \code{TRUE}, print debug messages (default \code{TRUE}).}
 }
 \value{
-The same list \code{pa} with additional elements set:
+A list with all input parameters (possibly updated) plus:
 \itemize{
 \item \code{pca_embeds}: Matrix of PCA (or Harmony) embeddings, cells in columns.
 \item \code{sample}: Sample ID per cell.

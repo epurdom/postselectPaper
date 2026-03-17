@@ -4,24 +4,48 @@
 \alias{create_augmented_data}
 \title{Create augmented data with simulated differentially expressed genes}
 \usage{
-create_augmented_data(pa, config, verbose = TRUE)
+create_augmented_data(
+  clustering,
+  pca_embeds,
+  sample,
+  nc,
+  sf,
+  randomization,
+  cut_at,
+  leiden_clusters = NULL,
+  clust_to_sample_from = NULL,
+  n_de_genes,
+  lfc_mean,
+  config = NULL,
+  verbose = TRUE
+)
 }
 \arguments{
-\item{pa}{Parameter list from \code{\link{prep_aug_sim}}. Must include:
-\itemize{
-\item \code{pca_embeds}, \code{sample}, \code{nc}, \code{sf}: from \code{prep_aug_sim}.
-\item \code{randomization}: \code{"cells"} or \code{"samples"}.
-\item \code{clustering}: \code{"graph"}, \code{"kmeans"}, \code{"leiden"}, or \code{"celltype"}.
-\item \code{cut_at}: Cluster sizes used for each simulated gene (recycled to \code{n_de_genes}).
-\item \code{n_de_genes}: Number of simulated DE genes to generate.
-\item \code{lfc_mean}: Mean log fold change (recycled; sign randomized per gene).
-\item \code{leiden_clusters}: (optional) Cluster labels when \code{clustering == "leiden"}.
-\item \code{clust_to_sample_from}: (optional) Which cluster IDs to sample as DE clusters; if \code{NULL}, all clusters.
-}}
+\item{clustering}{Character. \code{"graph"}, \code{"kmeans"}, \code{"leiden"}, or \code{"celltype"}.}
 
-\item{config}{Config list; \code{cell_type_column} is used when \code{clustering == "celltype"}.}
+\item{pca_embeds}{Matrix. PCA (or Harmony) embeddings, cells in columns (from \code{prep_aug_sim}).}
 
-\item{verbose}{If \code{TRUE}, print progress and per-gene debug info (default \code{TRUE}).}
+\item{sample}{Character or factor. Sample ID per cell (from \code{prep_aug_sim}).}
+
+\item{nc}{Integer. Number of cells (from \code{prep_aug_sim}).}
+
+\item{sf}{Numeric vector. Cell size factors (from \code{prep_aug_sim}).}
+
+\item{randomization}{Character. \code{"cells"} or \code{"samples"} for fake treatment/control assignment.}
+
+\item{cut_at}{Numeric vector. Cluster sizes used for each simulated gene (recycled to \code{n_de_genes}).}
+
+\item{leiden_clusters}{Optional integer vector. Cluster labels when \code{clustering == "leiden"}.}
+
+\item{clust_to_sample_from}{Optional integer vector. Which cluster IDs to sample as DE clusters; if \code{NULL}, all clusters.}
+
+\item{n_de_genes}{Integer. Number of simulated DE genes to generate.}
+
+\item{lfc_mean}{Numeric or vector. Mean log fold change (recycled; sign randomized per gene).}
+
+\item{config}{Optional list. \code{cell_type_column} is used when \code{clustering == "celltype"}.}
+
+\item{verbose}{Logical. If \code{TRUE}, print progress and per-gene debug info (default \code{TRUE}).}
 }
 \value{
 A list with:
