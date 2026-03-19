@@ -38,7 +38,7 @@
 #' )
 #' result <- combine_de_pvals_by_cluster(de_pvals_by_cluster, method = "adjust_all")
 combine_de_pvals_by_cluster <- function(de_pvals_by_cluster, method = "adjust_all") {
-  method <- match.arg(method, choices = c("adjust_all", "min_per_cluster", "fisher_combined_and_min", "2-stage-fisher", "2-stage-min-holm", "2-stage-cauchy"))
+  method <- match.arg(method, choices = c("adjust_all", "min_per_cluster", "fisher_combined_and_min", "2-stage-fisher", "2-stage-min-holm", "2-stage-cauchy", "2-stage-simes"))
   
   if (method == "adjust_all") {
     return(adjust_all_pvals(de_pvals_by_cluster))
@@ -66,7 +66,16 @@ combine_de_pvals_by_cluster <- function(de_pvals_by_cluster, method = "adjust_al
     res_table_to_return$gene <- as.character(res_table_to_return$gene)
     res_table_to_return$cluster_id <- as.character(res_table_to_return$cluster_id)
     return(res_table_to_return)
-  } else {
+  } else if (method == "2-stage-simes") {
+    print("Adjusting p-values using 2-stage procedure with Simes screening")
+    res_table_to_return <- two_stage_adjustment(de_pvals_by_cluster, screen_method = "simes")
+    res_table_to_return$adj_p_val <- res_table_to_return$adj_p_val_2stage
+    # cast res_table_to_return$gene to character
+    res_table_to_return$gene <- as.character(res_table_to_return$gene)
+    res_table_to_return$cluster_id <- as.character(res_table_to_return$cluster_id)
+    return(res_table_to_return)
+  } 
+  else {
     stop("Invalid method specified. Must be one of 'adjust_all', '2-stage-fisher', '2-stage-min-holm', or '2-stage-cauchy'.")
   }
 }
@@ -131,8 +140,17 @@ two_stage_adjustment <- function(de_pvals_by_cluster, screen_method = "min_holm"
         return(1 - pcauchy(Tsum))
       }
       combined_pvals <- apply(pval_matrix, 1, function(x) cauchyP(stats::na.omit(x)))
-  } else {
-    stop("Invalid screen_method specified. Must be one of 'min_holm', 'fisher', or 'cauchy'.")
+  } else if (screen_method == "simes") {
+      simesP <- function(p) {
+        m <- length(p)
+        p_sorted <- sort(p)
+        simes_pvals <- p_sorted * m / seq_along(p_sorted)
+        return(min(simes_pvals))
+      }
+      combined_pvals <- apply(pval_matrix, 1, function(x) simesP(stats::na.omit(x)))
+  }
+  else {
+    stop("Invalid screen_method specified. Must be one of 'min_holm', 'fisher', 'cauchy', or 'simes'.")
   }
   screen_pvalues_adj <- p.adjust(combined_pvals, method = "BH")
   # Compute adjusted p-values following 2-stage procedure
