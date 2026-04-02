@@ -92,13 +92,19 @@ create_full_augmented_data_w_num_sim_genes <- function(sim_prefix, new_id_check,
   args_prep <- pa[names(pa) %in% formalArgs(prep_aug_sim)]
   args_prep$processed_sim <- base_seurat
   args_prep$verbose <- verbose
-  pa <- do.call(prep_aug_sim, args_prep)
+  args_out <- do.call(prep_aug_sim, args_prep)
+  # add any parameter in pa that is not in args_out to args_out
+  for (param in names(pa)) {
+    if (!param %in% names(args_out)) {
+      args_out[[param]] <- pa[[param]]
+    }
+  }
   end_time <- Sys.time()
   print(paste0("Time taken to prepare augmented data: ", end_time - start_time))
 
   print(paste0("Generating augmented data by generating new counts"))
   start_time <- Sys.time()
-  args_aug <- pa[names(pa) %in% formalArgs(create_augmented_data)]
+  args_aug <- args_out[names(args_out) %in% formalArgs(create_augmented_data)]
   args_aug$verbose <- verbose
   augmented_data <- do.call(create_augmented_data, args_aug)
   end_time <- Sys.time()

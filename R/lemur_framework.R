@@ -469,7 +469,6 @@ create_augmented_data <- function(clustering,
   if (verbose) message(paste("List to sample from:", clust_to_sample_from))
 
   de_context <- list(
-    clustering_method = clustering_method,
     clustering_bank = clustering_bank,
     clust_to_sample_from = clust_to_sample_from,
     randomization_by_cell = randomization_by_cell,
