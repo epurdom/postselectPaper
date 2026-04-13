@@ -68,7 +68,7 @@ per_sim_data_extraction <- function(id_check_single, phen_type_removal, analysis
   combined_sim_res_DE_all$sPVE <- PVE_metrics$sPVE[as.character(combined_sim_res_DE_all$gene)]
 
 
-  poss_screen_methods <- c("min_holm", "fisher", "cauchy")
+  poss_screen_methods <- c("min_holm", "fisher", "cauchy", "simes")
   for (screen_method in poss_screen_methods) {
     combined_sim_res_DE_2stage <- two_stage_adjustment(sim_res_DE, screen_method = screen_method)
     tested_col <- paste0("tested_2stage_", screen_method)
@@ -162,6 +162,8 @@ get_conf_metrics_tested_all_hypotheses <- function(master_pwr_table_used, sig_th
     FN_all = sum(.data$FN_all, na.rm = TRUE),
     sPVE_avg_found_DE = if (sum(.data$found_DE, na.rm = TRUE) > 0) mean(.data$sPVE[.data$found_DE], na.rm = TRUE) else NA_real_,
     tPVE_avg_found_DE = if (sum(.data$found_DE, na.rm = TRUE) > 0) mean(.data$tPVE[.data$found_DE], na.rm = TRUE) else NA_real_,
+    num_tested_hypotheses = sum(!.data$not_tested),
+    num_rows_data = nrow(.data),
     .groups = "drop"
   )
   denom_power <- conf_metrics_tested$TP + conf_metrics_tested$FN

@@ -446,6 +446,27 @@ run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm
 
  if (run_PVE) {
    used_sce$cluster_id <- clustering_assignment_curr_anls
+   # aggregateAcrossCells(ids = DataFrame(cluster_id, sample_id)) requires two
+   # vectors of length ncol(sce). DE may have set sample_id, but real objects
+   # sometimes lack it or inherit a wrong-length column — normalize from sample.
+   nc <- ncol(used_sce)
+   sid <- SingleCellExperiment::colData(used_sce)$sample_id
+   if (is.null(sid) || length(sid) != nc) {
+     if (!"sample" %in% colnames(SingleCellExperiment::colData(used_sce))) {
+       stop(
+         "run_PVE=TRUE requires colData 'sample_id' or 'sample' with length ncol(used_sce) (",
+         nc, ")."
+       )
+     }
+     used_sce$sample_id <- used_sce$sample
+   }
+   cid <- SingleCellExperiment::colData(used_sce)$cluster_id
+   if (is.null(cid) || length(cid) != nc) {
+     stop(
+       "run_PVE=TRUE: cluster_id must have length ncol(used_sce) (", nc, "), got ",
+       length(cid), "."
+     )
+   }
    start_time <- Sys.time()
    pve_results <- get_PVE_of_genes(used_sce, lblnorm_counts, use_pseudobulk = TRUE)
    end_time <- Sys.time()
