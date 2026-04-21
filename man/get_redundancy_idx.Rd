@@ -10,7 +10,9 @@ get_redundancy_idx(
   res_DE,
   num_genes,
   sig_threshold,
-  file_naming_utils
+  anls_info_dir,
+  cca_anls_save_prfx,
+  anls_patterns
 )
 }
 \arguments{
@@ -24,7 +26,11 @@ get_redundancy_idx(
 
 \item{sig_threshold}{Numeric. FDR threshold for counting DE genes (default \code{0.10}).}
 
-\item{file_naming_utils}{Optional list with \code{dscrptn_path}, \code{cca_anls_save_prfx}, \code{anls_patterns}. If \code{NULL}, read from the calling environment.}
+\item{anls_info_dir}{Character. Directory for analysis RDS files.}
+
+\item{cca_anls_save_prfx}{Character. Prefix for CCA analysis RDS filenames.}
+
+\item{anls_patterns}{Named list. Maps \code{analysis_type} to filename infix.}
 }
 \value{
 List with \code{redundancy_idx} (from \code{cca_anls$Y.redun}) and \code{num_de_found}.

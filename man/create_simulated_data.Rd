@@ -9,7 +9,15 @@ create_simulated_data(
   sim_prefix,
   new_id_check,
   num_de_genes,
-  file_naming_utils
+  base_seurat_fn,
+  sims_info_dir,
+  param_file_prefix,
+  de_args_save_prfx,
+  condition_save_prfx,
+  sample_ids_save_prfx,
+  gt_clusterings_save_prfx,
+  verbose = TRUE,
+  save_down = TRUE
 )
 }
 \arguments{
@@ -21,7 +29,23 @@ create_simulated_data(
 
 \item{num_de_genes}{Integer. Number of differentially expressed genes to simulate.}
 
-\item{file_naming_utils}{List. Paths and prefixes for loading/saving (see target function).}
+\item{base_seurat_fn}{Character. Full path to base Seurat RDS file.}
+
+\item{sims_info_dir}{Character. Directory for simulation parameter and output RDS files.}
+
+\item{param_file_prefix}{Character. Prefix for parameter list RDS (e.g. \code{pa_preseurat_}).}
+
+\item{de_args_save_prfx}{Character. Prefix for saving \code{de_args} RDS.}
+
+\item{condition_save_prfx}{Character. Prefix for saving \code{fake_condition} RDS.}
+
+\item{sample_ids_save_prfx}{Character. Prefix for saving sample IDs RDS.}
+
+\item{gt_clusterings_save_prfx}{Character. Prefix for saving ground-truth clusterings RDS.}
+
+\item{verbose}{Logical. If \code{TRUE}, print progress (default \code{TRUE}).}
+
+\item{save_down}{Logical. If \code{TRUE}, save intermediate RDS files (default \code{TRUE}).}
 }
 \value{
 A list as returned by the underlying simulation function (e.g. \code{used_sce} and \code{pa_de} for augData).

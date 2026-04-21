@@ -8,7 +8,10 @@ get_num_single_cond_clusts(
   curr_id_check,
   analysis_type,
   cut_off_single_cond,
-  file_naming_utils
+  anls_info_dir,
+  pa_de_save_prfx,
+  clustering_prefix,
+  anls_patterns
 )
 }
 \arguments{
@@ -18,7 +21,13 @@ get_num_single_cond_clusts(
 
 \item{cut_off_single_cond}{Numeric. Minimum cells per condition to count cluster as "both conditions" (default \code{100}).}
 
-\item{file_naming_utils}{Optional list with \code{dscrptn_path}, \code{pa_de_prefix}, \code{clustering_prefix}, \code{anls_patterns}. If \code{NULL}, these are read from the calling environment.}
+\item{anls_info_dir}{Character. Directory for analysis RDS files.}
+
+\item{pa_de_save_prfx}{Character. Prefix for \code{pa_de} RDS filenames.}
+
+\item{clustering_prefix}{Character. Prefix for cluster assignment RDS filenames.}
+
+\item{anls_patterns}{Named list. Maps \code{analysis_type} to filename infix.}
 }
 \value{
 Integer. Number of clusters with at most one condition above the cutoff.

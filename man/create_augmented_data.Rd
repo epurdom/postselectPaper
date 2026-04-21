@@ -16,7 +16,6 @@ create_augmented_data(
   clust_to_sample_from = NULL,
   n_de_genes,
   lfc_mean,
-  config = NULL,
   verbose = TRUE
 )
 }
@@ -43,15 +42,13 @@ create_augmented_data(
 
 \item{lfc_mean}{Numeric or vector. Mean log fold change (recycled; sign randomized per gene).}
 
-\item{config}{Optional list. \code{cell_type_column} is used when \code{clustering == "celltype"}.}
-
 \item{verbose}{Logical. If \code{TRUE}, print progress and per-gene debug info (default \code{TRUE}).}
 }
 \value{
 A list with:
 \itemize{
 \item \code{new_counts}: Matrix of simulated counts (\code{n_de_genes} x \code{nc}).
-\item \code{kmeans_clusterings}: Named list of cluster vectors (for \code{kmeans}/\code{leiden}); used for downstream alignment.
+\item \code{clustering_bank}: Named list of cluster vectors (for \code{kmeans}/\code{leiden}); used for downstream alignment.
 \item \code{de_args}: A tibble with one row per simulated gene: \code{name}, \code{is_simulated}, \code{cut_at}, \code{base_expr}, \code{lfc}, \code{sel_cluster}, \code{is_de_cell}.
 \item \code{fake_condition}: Character vector of \code{"fake_ctrl"} or \code{"fake_trt"} per cell.
 }

@@ -4,7 +4,15 @@
 \alias{get_ref_ari}
 \title{Adjusted Rand Index between current and reference clustering}
 \usage{
-get_ref_ari(curr_id_check, analysis_type, ref_analysis_type, file_naming_utils)
+get_ref_ari(
+  curr_id_check,
+  analysis_type,
+  ref_analysis_type,
+  anls_info_dir,
+  pa_de_save_prfx,
+  clustering_prefix,
+  anls_patterns
+)
 }
 \arguments{
 \item{curr_id_check}{Character. Run ID.}
@@ -13,7 +21,13 @@ get_ref_ari(curr_id_check, analysis_type, ref_analysis_type, file_naming_utils)
 
 \item{ref_analysis_type}{Character. \code{"gt"} for ground truth, or key for reference clustering in \code{anls_patterns}.}
 
-\item{file_naming_utils}{Optional list with \code{dscrptn_path}, \code{pa_de_prefix}, \code{clustering_prefix}, \code{anls_patterns}. If \code{NULL}, read from the calling environment.}
+\item{anls_info_dir}{Character. Directory for analysis RDS files.}
+
+\item{pa_de_save_prfx}{Character. Prefix for \code{pa_de} RDS filenames.}
+
+\item{clustering_prefix}{Character. Prefix for cluster assignment RDS filenames.}
+
+\item{anls_patterns}{Named list. Maps analysis type to filename infix.}
 }
 \value{
 Numeric. ARI from \code{mclust::adjustedRandIndex}.

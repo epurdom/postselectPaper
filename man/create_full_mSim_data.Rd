@@ -9,7 +9,13 @@ create_full_mSim_data(
   id_check,
   lfc,
   num_de_genes,
-  file_naming_utils
+  base_seurat_fn = NULL,
+  sims_info_dir = NULL,
+  param_file_prefix = NULL,
+  de_args_save_prfx = NULL,
+  condition_save_prfx = NULL,
+  sample_ids_save_prfx = NULL,
+  gt_clusterings_save_prfx = NULL
 )
 }
 \arguments{
@@ -21,7 +27,19 @@ create_full_mSim_data(
 
 \item{num_de_genes}{Integer. Number of DE genes.}
 
-\item{file_naming_utils}{List. Path configuration (unused; mSim not implemented).}
+\item{base_seurat_fn}{Unused; mSim not implemented.}
+
+\item{sims_info_dir}{Unused; mSim not implemented.}
+
+\item{param_file_prefix}{Unused; mSim not implemented.}
+
+\item{de_args_save_prfx}{Unused; mSim not implemented.}
+
+\item{condition_save_prfx}{Unused; mSim not implemented.}
+
+\item{sample_ids_save_prfx}{Unused; mSim not implemented.}
+
+\item{gt_clusterings_save_prfx}{Unused; mSim not implemented.}
 }
 \value{
 Nothing; stops with an error.

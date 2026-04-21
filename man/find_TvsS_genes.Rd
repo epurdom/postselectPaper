@@ -9,7 +9,8 @@ find_TvsS_genes(
   clust_results,
   num_genes_for_TvsS_clustering,
   new_id_check,
-  file_naming_utils,
+  anls_info_dir,
+  PVE_metrics_save_prfx,
   use_pseudobulk_TvsS = TRUE
 )
 }
@@ -22,7 +23,9 @@ find_TvsS_genes(
 
 \item{new_id_check}{Run ID used when saving PVE RDS.}
 
-\item{file_naming_utils}{List with \code{anls_info_dir} and \code{PVE_metrics_save_prfx}.}
+\item{anls_info_dir}{Character. Directory for intermediate analysis RDS files.}
+
+\item{PVE_metrics_save_prfx}{Character. Prefix for PVE metrics RDS filenames.}
 
 \item{use_pseudobulk_TvsS}{Passed to \code{\link{get_PVE_of_genes}} (default \code{TRUE}).}
 }
@@ -32,6 +35,5 @@ Character vector of gene names (top type-over-state genes).
 \description{
 Computes PVE (type and state) via \code{\link{get_PVE_of_genes}}, ranks genes
 by \code{rank(tPVE) - rank(sPVE)}, and returns the top
-\code{num_genes_for_TvsS_clustering} genes. Saves PVE metrics to
-\code{file_naming_utils$anls_info_dir}.
+\code{num_genes_for_TvsS_clustering} genes. Saves PVE metrics to \code{anls_info_dir}.
 }

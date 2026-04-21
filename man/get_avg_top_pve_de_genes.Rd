@@ -8,7 +8,9 @@ get_avg_top_pve_de_genes(
   curr_id_check,
   analysis_type,
   pct_top_var_genes,
-  file_naming_utils
+  anls_info_dir,
+  var_fracs_save_prfx,
+  anls_patterns
 )
 }
 \arguments{
@@ -18,7 +20,11 @@ get_avg_top_pve_de_genes(
 
 \item{pct_top_var_genes}{Numeric. Fraction of genes (by rank) to average (default \code{0.5}).}
 
-\item{file_naming_utils}{Optional list with \code{dscrptn_path}, \code{var_fracs_save_prfx}, \code{anls_patterns}. If \code{NULL}, read from the calling environment.}
+\item{anls_info_dir}{Character. Directory for analysis RDS files.}
+
+\item{var_fracs_save_prfx}{Character. Prefix for variance-fractions RDS filenames.}
+
+\item{anls_patterns}{Named list. Maps \code{analysis_type} to filename infix.}
 }
 \value{
 Numeric. Mean cluster PVE for the top genes.

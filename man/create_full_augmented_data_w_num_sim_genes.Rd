@@ -8,7 +8,13 @@ create_full_augmented_data_w_num_sim_genes(
   sim_prefix,
   new_id_check,
   num_sim_genes,
-  file_naming_utils,
+  base_seurat_fn,
+  sims_info_dir,
+  param_file_prefix,
+  de_args_save_prfx,
+  condition_save_prfx,
+  sample_ids_save_prfx,
+  gt_clusterings_save_prfx,
   verbose = TRUE,
   save_down = TRUE
 )
@@ -20,10 +26,19 @@ create_full_augmented_data_w_num_sim_genes(
 
 \item{num_sim_genes}{Integer. Number of simulated DE genes.}
 
-\item{file_naming_utils}{List. Must contain \code{base_seurat_fn},
-\code{sims_info_dir}, \code{param_file_prefix}, and save prefixes:
-\code{de_args_save_prfx}, \code{condition_save_prfx},
-\code{sample_ids_save_prfx}, \code{gt_clusterings_save_prfx}.}
+\item{base_seurat_fn}{Character. Full path to base Seurat RDS file.}
+
+\item{sims_info_dir}{Character. Directory for simulation parameter and output RDS files.}
+
+\item{param_file_prefix}{Character. Prefix for parameter list RDS (e.g. \code{pa_preseurat_}).}
+
+\item{de_args_save_prfx}{Character. Prefix for saving \code{de_args} RDS.}
+
+\item{condition_save_prfx}{Character. Prefix for saving \code{fake_condition} RDS.}
+
+\item{sample_ids_save_prfx}{Character. Prefix for saving sample IDs RDS.}
+
+\item{gt_clusterings_save_prfx}{Character. Prefix for saving ground-truth clusterings RDS.}
 
 \item{verbose}{Logical. If \code{TRUE}, print progress (default \code{TRUE}).}
 
@@ -41,5 +56,5 @@ Loads the base Seurat object and parameter list, runs \code{\link{prep_aug_sim}}
 and \code{\link{create_augmented_data}} (from this package), then builds a
 \code{SingleCellExperiment} combining real and simulated counts. Optionally
 saves \code{de_args}, \code{fake_condition}, sample IDs, and ground-truth
-clusterings under \code{file_naming_utils$sims_info_dir}.
+clusterings under \code{sims_info_dir}.
 }

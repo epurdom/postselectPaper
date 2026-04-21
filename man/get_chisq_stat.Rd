@@ -4,14 +4,27 @@
 \alias{get_chisq_stat}
 \title{Chi-squared statistic for condition x cluster contingency table}
 \usage{
-get_chisq_stat(curr_id_check, analysis_type, file_naming_utils)
+get_chisq_stat(
+  curr_id_check,
+  analysis_type,
+  anls_info_dir,
+  pa_de_save_prfx,
+  clustering_prefix,
+  anls_patterns
+)
 }
 \arguments{
 \item{curr_id_check}{Character. Run ID.}
 
 \item{analysis_type}{Character. Key for \code{anls_patterns}.}
 
-\item{file_naming_utils}{Optional list with \code{dscrptn_path}, \code{pa_de_prefix}, \code{clustering_prefix}, \code{anls_patterns}. If \code{NULL}, read from the calling environment.}
+\item{anls_info_dir}{Character. Directory for analysis RDS files.}
+
+\item{pa_de_save_prfx}{Character. Prefix for \code{pa_de} RDS filenames.}
+
+\item{clustering_prefix}{Character. Prefix for cluster assignment RDS filenames.}
+
+\item{anls_patterns}{Named list. Maps \code{analysis_type} to filename infix.}
 }
 \value{
 Numeric. \code{chisq.test(cont_table)$statistic}.

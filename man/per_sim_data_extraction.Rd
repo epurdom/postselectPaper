@@ -12,7 +12,7 @@ per_sim_data_extraction(
   overlap_matrix_prefix,
   de_pvals_by_cluster_prefix,
   pa_de_save_prfx,
-  PVE_metrics_save_prfx
+  mv_PVE_metrics_save_prfx
 )
 }
 \arguments{
@@ -30,7 +30,7 @@ per_sim_data_extraction(
 
 \item{pa_de_save_prfx}{Character. Filename prefix for \code{pa_de} RDS (contains \code{num_de_genes}).}
 
-\item{PVE_metrics_save_prfx}{Character. Filename prefix for PVE metrics RDS (\code{tPVE}, \code{sPVE} by gene).}
+\item{mv_PVE_metrics_save_prfx}{Character. Filename prefix for multivariate embedding PVE metrics RDS (\code{tPVE}, \code{sPVE} by gene).}
 }
 \value{
 A data.frame with gene-cluster rows, DE results, overlap counts, PVE, and 2-stage

@@ -17,7 +17,11 @@ prep_aug_sim(
   use_harmony,
   leiden_resolution = NULL,
   leiden_clusters = NULL,
-  config,
+  main_covariate,
+  sample_covariate,
+  assay_continuous,
+  cell_type_column,
+  batch_covariate,
   processed_sim = NULL,
   num_pcs = 50,
   verbose = TRUE
@@ -40,7 +44,7 @@ prep_aug_sim(
 
 \item{dest_file}{Optional character. Path to save the processed Seurat object. If \code{NULL}, object is not saved.}
 
-\item{condition}{Optional character vector. Value(s) of \code{config$main_covariate} to filter cells; if \code{NULL}, all cells used.}
+\item{condition}{Optional character vector. Value(s) of \code{main_covariate} to filter cells; if \code{NULL}, all cells used.}
 
 \item{use_harmony}{Logical. Whether to run Harmony batch correction.}
 
@@ -48,14 +52,15 @@ prep_aug_sim(
 
 \item{leiden_clusters}{Optional integer vector. Precomputed Leiden cluster labels when \code{clustering == "leiden"}.}
 
-\item{config}{List of data configuration:
-\itemize{
-\item \code{main_covariate}: Name of condition/treatment column in \code{colData}.
-\item \code{sample_covariate}: Name of sample column.
-\item \code{assay_continuous}: Assay name used for variance (e.g. HVG selection).
-\item \code{cell_type_column}: Name of cell type column (used when \code{clustering == "celltype"}).
-\item \code{batch_covariate}: Name of batch column (for Harmony).
-}}
+\item{main_covariate}{Character. Name of condition/treatment column in \code{colData}.}
+
+\item{sample_covariate}{Character. Name of sample column (and for Harmony).}
+
+\item{assay_continuous}{Character. Assay name used for variance (e.g. HVG selection).}
+
+\item{cell_type_column}{Character. Name of cell type column (used when \code{clustering == "celltype"}).}
+
+\item{batch_covariate}{Character. Name of batch column (for Harmony).}
 
 \item{processed_sim}{Optional pre-processed Seurat object; if provided, \code{datapath} is not used.}
 

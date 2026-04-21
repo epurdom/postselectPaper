@@ -12,12 +12,24 @@ run_analysis_for_clustering(
   sim_type,
   curr_anls,
   new_id_check,
-  file_naming_utils,
+  anls_info_dir,
+  des_dir,
+  clustering_prefix,
+  de_overlap_info_save_prfx,
+  res_de_save_prfx,
+  PVE_metrics_save_prfx,
+  anls_patterns,
   cut_off_true,
   cut_off_false,
   sig_threshold,
   overlap_type,
-  run_PVE = FALSE
+  run_PVE = FALSE,
+  cell_embeddings = NULL,
+  embedding_pc_weights = NULL,
+  mv_PVE_metrics_save_prfx = "mv_PVE_embed_",
+  mv_embed_max_cells = Inf,
+  mv_embed_max_pcs = Inf,
+  mv_embed_seed = NULL
 )
 }
 \arguments{
@@ -35,7 +47,19 @@ run_analysis_for_clustering(
 
 \item{new_id_check}{Character. Run ID used in file names.}
 
-\item{file_naming_utils}{List. Paths and save prefixes (see description).}
+\item{anls_info_dir}{Character. Directory for intermediate analysis RDS files.}
+
+\item{des_dir}{Character. Directory for final DE result RDS files.}
+
+\item{clustering_prefix}{Character. Prefix for cluster assignment RDS filenames.}
+
+\item{de_overlap_info_save_prfx}{Character. Prefix for overlap info RDS filenames.}
+
+\item{res_de_save_prfx}{Character. Prefix for DE result RDS filenames.}
+
+\item{PVE_metrics_save_prfx}{Character. Prefix for PVE metrics RDS filenames.}
+
+\item{anls_patterns}{Named list. Maps analysis label (e.g. \code{curr_anls}) to filename infix.}
 
 \item{cut_off_true, cut_off_false}{Numeric. Reserved for downstream use; not used here.}
 
@@ -43,7 +67,22 @@ run_analysis_for_clustering(
 
 \item{overlap_type}{Unused; kept for interface compatibility.}
 
-\item{run_PVE}{If \code{TRUE}, run and save PVE metrics (default \code{FALSE}).}
+\item{run_PVE}{If \code{TRUE}, run and save per-gene PVE metrics (default \code{FALSE}).}
+
+\item{cell_embeddings}{Matrix (\code{cells \times PCs}) aligned to \code{colnames(used_sce)} via
+\code{rownames}, or same row order as cells. Used only when \code{run_PVE} is \code{FALSE}.
+The mv-PVE \code{lm} fits do \strong{not} adjust for sample; only condition and cluster.}
+
+\item{embedding_pc_weights}{Optional numeric vector of length \eqn{\ge} number of PCs used
+(e.g. \code{pca_stdev^2}). If \code{NULL}, column variances of the embedding are used.}
+
+\item{mv_PVE_metrics_save_prfx}{File prefix for multivariate embedding PVE RDS (when \code{run_PVE} is \code{FALSE}).}
+
+\item{mv_embed_max_cells}{If finite, stratified subsample by \code{sample_id} to at most this many cells.}
+
+\item{mv_embed_max_pcs}{Maximum number of leading PCs to use.}
+
+\item{mv_embed_seed}{Optional seed when subsampling.}
 }
 \value{
 A list with \code{res_DE} (DE table) and \code{de_overlap_info} (overlap list).
@@ -51,9 +90,8 @@ A list with \code{res_DE} (DE table) and \code{de_overlap_info} (overlap list).
 \description{
 Saves cluster assignment and overlap info to RDS, runs pseudobulk DE via
 \code{\link{run_mSim_type_DE_analysis}}, adjusts p-values with
-\code{\link{adjust_all_pvals}}, and optionally runs and saves PVE with
-\code{\link{get_PVE_of_genes}}. \code{file_naming_utils} must contain
-\code{anls_info_dir}, \code{des_dir}, \code{clustering_prefix},
-\code{de_overlap_info_save_prfx}, \code{res_de_save_prfx},
-\code{PVE_metrics_save_prfx}, \code{anls_patterns}.
+\code{\link{adjust_all_pvals}}, optionally runs and saves per-gene PVE with
+\code{\link{get_PVE_of_genes}} when \code{run_PVE} is \code{TRUE}, and when
+\code{run_PVE} is \code{FALSE} and \code{cell_embeddings} is set, saves
+multivariate embedding PVE via \code{\link{get_mv_PVE_embeddings}}.
 }

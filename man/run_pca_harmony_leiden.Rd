@@ -10,7 +10,8 @@ run_pca_harmony_leiden(
   leiden_res = 0.1,
   kmeans_k = 6,
   num_pcs = 50,
-  include_batch = TRUE
+  include_batch = TRUE,
+  reduce_number_of_genes = NULL
 )
 }
 \arguments{
@@ -31,10 +32,12 @@ run_pca_harmony_leiden(
 A list with:
 \itemize{
 \item \code{pca_embeds}: PCA embedding matrix.
+\item \code{pca_stdev}: Standard deviation per PCA dimension (for variance weights).
 \item \code{harmony_embeddings}: Harmony embedding matrix.
 \item \code{cluster_assignment_list}: Cluster factor from PCA.
 \item \code{cluster_assignment_list_harmony}: Cluster factor from Harmony.
 \item \code{lblnorm_counts}: Log-normalized counts matrix.
+\item \code{reduce_number_of_genes}: Number of genes to reduce the number of genes to.
 }
 }
 \description{

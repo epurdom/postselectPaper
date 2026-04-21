@@ -81,6 +81,7 @@ cluster_using_kmeans <- function(seurat_obj, kmeans_k = 4, reduction_type = "pca
 #' @return A list with:
 #'   \itemize{
 #'     \item \code{pca_embeds}: PCA embedding matrix.
+#'     \item \code{pca_stdev}: Standard deviation per PCA dimension (for variance weights).
 #'     \item \code{harmony_embeddings}: Harmony embedding matrix.
 #'     \item \code{cluster_assignment_list}: Cluster factor from PCA.
 #'     \item \code{cluster_assignment_list_harmony}: Cluster factor from Harmony.
@@ -123,6 +124,7 @@ run_pca_harmony_leiden <- function(
  print("Running seurat pca and clustering")
  seurat_obj <- Seurat::RunPCA(seurat_obj, npcs = num_pcs)
  pca_embeds <- Seurat::Embeddings(seurat_obj, reduction = "pca")
+ pca_stdev <- seurat_obj[["pca"]]@stdev
   # Run Harmony for batch correction (optionally including "batch" in the model)
  if (include_batch) {
    seurat_obj <- harmony::RunHarmony(seurat_obj, group.by.vars = c("sample", "batch"))
@@ -149,12 +151,167 @@ run_pca_harmony_leiden <- function(
   # Assemble return list
  to_return <- list(
    pca_embeds                  = pca_embeds,
+   pca_stdev                   = pca_stdev,
    harmony_embeddings          = harmony_embeddings,
    cluster_assignment_list     = cluster_assignment_list,
    cluster_assignment_list_harmony = cluster_assignment_list_harmony,
    lblnorm_counts              = lblnorm_counts
  )
  return(to_return)
+}
+
+
+#' Sequential augmented simulation through prep, data creation, and clustering
+#'
+#' Runs \code{\link{prep_aug_sim}} from raw \code{SingleCellExperiment} paths,
+#' saves the parameter list to \code{sims_info_dir} as
+#' \code{<param_file_prefix><sim_prefix>.Rds} (so \code{\link{create_simulated_data}}
+#' can load it), calls \code{\link{create_simulated_data}}, annotates \code{pa_de}
+#' with clustering options, and runs \code{\link{run_pca_harmony_leiden}} on
+#' \code{used_sce}. For pseudobulk DE, call \code{\link{run_mSim_type_DE_analysis}}
+#' on \code{result$sim_data$used_sce} separately.
+#'
+#' @param base_seurat_fn Path to the base Seurat RDS used by \code{create_simulated_data}.
+#' @param id_check Run id (integer or string); combined into \code{new_id_check} as
+#'   \code{paste0(sim_prefix, "_", id_check, "_nsim_", num_de_genes)}.
+#' @param sim_prefix Simulation key; must match the stem of the saved pa RDS
+#'   (\code{param_file_prefix} + \code{sim_prefix} + \code{.Rds}).
+#' @param raw_data_path Path to raw \code{SingleCellExperiment} \code{.Rda} / \code{.rds} for \code{prep_aug_sim}.
+#' @param processed_null_data_path Path where \code{prep_aug_sim} writes the processed Seurat (via \code{dest_file}).
+#' @param sims_info_dir Directory for simulation parameter and auxiliary RDS files.
+#' @param param_file_prefix Prefix for the saved prep list (e.g. \code{"pa_preseurat_"}).
+#' @param num_de_genes Number of DE genes to simulate.
+#' @param sim_type Passed to \code{create_simulated_data}: \code{"augData"} or \code{"mSim"}.
+#' @param de_args_save_prfx,condition_save_prfx,sample_ids_save_prfx,gt_clusterings_save_prfx
+#'   Filename prefixes for intermediate saves (see \code{\link{create_simulated_data}}).
+#' @param randomization \code{"samples"} or \code{"cells"} for \code{prep_aug_sim}.
+#' @param clustering Clustering method for \code{prep_aug_sim} (e.g. \code{"kmeans"}, \code{"leiden"}).
+#' @param cut_at Numeric vector of cluster-size settings for the augmentation hierarchy.
+#' @param lfc_mean Numeric vector of mean log-fold-changes for simulated DE genes.
+#' @param n_hvgs Number of highly variable genes in \code{prep_aug_sim}.
+#' @param use_harmony Logical; run Harmony in \code{prep_aug_sim}.
+#' @param leiden_resolution Leiden resolution when relevant for \code{prep_aug_sim}.
+#' @param main_covariate,sample_covariate,assay_continuous,cell_type_column,batch_covariate
+#'   \code{colData} / assay names for \code{prep_aug_sim}.
+#' @param num_pcs Number of PCs for \code{prep_aug_sim}; also the default for clustering when
+#'   \code{num_pcs_clustering} is \code{NULL}.
+#' @param cluster_type \code{"leiden"} or \code{"kmeans"} for \code{run_pca_harmony_leiden}.
+#' @param leiden_res Leiden resolution for \code{run_pca_harmony_leiden}.
+#' @param kmeans_k Number of k-means clusters for \code{run_pca_harmony_leiden}.
+#' @param num_pcs_clustering PCs for \code{run_pca_harmony_leiden}; if \code{NULL}, \code{num_pcs} is used.
+#' @param verbose Logical; messages from pipeline steps.
+#' @param save_down Logical; passed to \code{create_simulated_data} (write intermediate RDS).
+#'
+#' @return A list with elements \code{pa} (from \code{prep_aug_sim}), \code{sim_data}
+#'   (from \code{create_simulated_data}), and \code{clust_results} (from \code{run_pca_harmony_leiden}).
+#'
+#' @seealso \code{\link{prep_aug_sim}}, \code{\link{create_simulated_data}},
+#'   \code{\link{run_pca_harmony_leiden}}, \code{\link{run_mSim_type_DE_analysis}}
+#' @export
+run_sequential_simulation_pipeline <- function(
+    base_seurat_fn,
+    id_check,
+    sim_prefix,
+    raw_data_path,
+    processed_null_data_path,
+    sims_info_dir,
+    param_file_prefix,
+    num_de_genes,
+    sim_type,
+    de_args_save_prfx,
+    condition_save_prfx,
+    sample_ids_save_prfx,
+    gt_clusterings_save_prfx,
+    randomization,
+    clustering,
+    cut_at,
+    lfc_mean,
+    n_hvgs,
+    use_harmony,
+    leiden_resolution,
+    main_covariate,
+    sample_covariate,
+    assay_continuous,
+    cell_type_column,
+    batch_covariate,
+    num_pcs,
+    cluster_type,
+    leiden_res,
+    kmeans_k,
+    num_pcs_clustering,
+    verbose,
+    save_down) {
+  sims_info_dir <- sub("/$", "", sims_info_dir)
+  if (!dir.exists(sims_info_dir)) {
+    dir.create(sims_info_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+
+  if (verbose) message("Step 1: prep_aug_sim")
+  pa_prep_aug_sim <- list(
+    randomization = randomization,
+    clustering = clustering,
+    cut_at = cut_at,
+    lfc_mean = lfc_mean,
+    n_hvgs = n_hvgs,
+    datapath = raw_data_path,
+    dest_file = processed_null_data_path,
+    use_harmony = use_harmony,
+    leiden_resolution = leiden_resolution,
+    main_covariate = main_covariate,
+    sample_covariate = sample_covariate,
+    assay_continuous = assay_continuous,
+    cell_type_column = cell_type_column,
+    batch_covariate = batch_covariate,
+    num_pcs = num_pcs,
+    verbose = verbose
+  )
+  args_prep <- pa_prep_aug_sim[names(pa_prep_aug_sim) %in% formalArgs(prep_aug_sim)]
+  pa <- do.call(prep_aug_sim, args_prep)
+
+  pa_rds <- file.path(sims_info_dir, paste0(param_file_prefix, sim_prefix, ".Rds"))
+  if (verbose) message("Saving pa to ", pa_rds)
+  saveRDS(pa, pa_rds)
+
+  new_id_check <- paste0(sim_prefix, "_", id_check, "_nsim_", num_de_genes)
+
+  if (verbose) message("Step 2: create_simulated_data")
+  args_sim <- list(
+    sim_type = sim_type,
+    sim_prefix = sim_prefix,
+    new_id_check = new_id_check,
+    num_de_genes = num_de_genes,
+    base_seurat_fn = base_seurat_fn,
+    sims_info_dir = paste0(sims_info_dir, "/"),
+    param_file_prefix = param_file_prefix,
+    de_args_save_prfx = de_args_save_prfx,
+    condition_save_prfx = condition_save_prfx,
+    sample_ids_save_prfx = sample_ids_save_prfx,
+    gt_clusterings_save_prfx = gt_clusterings_save_prfx,
+    verbose = verbose,
+    save_down = save_down
+  )
+  args_sim <- args_sim[names(args_sim) %in% formalArgs(create_simulated_data)]
+  sim_data <- do.call(create_simulated_data, args_sim)
+
+  used_sce <- sim_data$used_sce
+  pa_de <- sim_data$pa_de
+  pa_de$cluster_type <- cluster_type
+  pa_de$kmeans_k <- kmeans_k
+  pa_de$leiden_res <- leiden_res
+  pa_de$num_pcs <- num_pcs
+
+  npc <- if (is.null(num_pcs_clustering)) num_pcs else num_pcs_clustering
+
+  if (verbose) message("Step 3: run_pca_harmony_leiden")
+  clust_results <- run_pca_harmony_leiden(
+    used_sce,
+    cluster_type = cluster_type,
+    leiden_res = leiden_res,
+    kmeans_k = kmeans_k,
+    num_pcs = npc,
+    include_batch = pa_de$include_batch
+  )
+  list(pa = pa, sim_data = sim_data, clust_results = clust_results)
 }
 
 
@@ -394,8 +551,10 @@ run_mSim_type_DE_analysis <- function(sce, cluster_id_col, sample_id_col, group_
 #'
 #' Saves cluster assignment and overlap info to RDS, runs pseudobulk DE via
 #' \code{\link{run_mSim_type_DE_analysis}}, adjusts p-values with
-#' \code{\link{adjust_all_pvals}}, and optionally runs and saves PVE with
-#' \code{\link{get_PVE_of_genes}}.
+#' \code{\link{adjust_all_pvals}}, optionally runs and saves per-gene PVE with
+#' \code{\link{get_PVE_of_genes}} when \code{run_PVE} is \code{TRUE}, and when
+#' \code{run_PVE} is \code{FALSE} and \code{cell_embeddings} is set, saves
+#' multivariate embedding PVE via \code{\link{get_mv_PVE_embeddings}}.
 #'
 #' @param clustering_assignment_curr_anls Factor. Cluster assignment per cell.
 #' @param lblnorm_counts Matrix. Log-normalized counts (for PVE when \code{run_PVE} is \code{TRUE}).
@@ -414,7 +573,16 @@ run_mSim_type_DE_analysis <- function(sce, cluster_id_col, sample_id_col, group_
 #' @param cut_off_true,cut_off_false Numeric. Reserved for downstream use; not used here.
 #' @param sig_threshold Numeric. Threshold for adjusted p-value to define DE genes.
 #' @param overlap_type Unused; kept for interface compatibility.
-#' @param run_PVE If \code{TRUE}, run and save PVE metrics (default \code{FALSE}).
+#' @param run_PVE If \code{TRUE}, run and save per-gene PVE metrics (default \code{FALSE}).
+#' @param cell_embeddings Matrix (\code{cells \times PCs}) aligned to \code{colnames(used_sce)} via
+#'   \code{rownames}, or same row order as cells. Used only when \code{run_PVE} is \code{FALSE}.
+#'   The mv-PVE \code{lm} fits do **not** adjust for sample; only condition and cluster.
+#' @param embedding_pc_weights Optional numeric vector of length \eqn{\ge} number of PCs used
+#'   (e.g. \code{pca_stdev^2}). If \code{NULL}, column variances of the embedding are used.
+#' @param mv_PVE_metrics_save_prfx File prefix for multivariate embedding PVE RDS (when \code{run_PVE} is \code{FALSE}).
+#' @param mv_embed_max_cells If finite, stratified subsample by \code{sample_id} to at most this many cells.
+#' @param mv_embed_max_pcs Maximum number of leading PCs to use.
+#' @param mv_embed_seed Optional seed when subsampling.
 #'
 #' @return A list with \code{res_DE} (DE table) and \code{de_overlap_info} (overlap list).
 #'
@@ -425,7 +593,10 @@ run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm
                                      curr_anls, new_id_check,
                                      anls_info_dir, des_dir, clustering_prefix, de_overlap_info_save_prfx,
                                      res_de_save_prfx, PVE_metrics_save_prfx, anls_patterns,
-                                     cut_off_true, cut_off_false, sig_threshold, overlap_type, run_PVE = FALSE) {
+                                     cut_off_true, cut_off_false, sig_threshold, overlap_type, run_PVE = FALSE,
+                                     cell_embeddings = NULL, embedding_pc_weights = NULL,
+                                     mv_PVE_metrics_save_prfx = "mv_PVE_embed_",
+                                     mv_embed_max_cells = Inf, mv_embed_max_pcs = Inf, mv_embed_seed = NULL) {
 
 
  print(paste0("Running analysis for clustering: ", curr_anls))
@@ -474,52 +645,221 @@ run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm
 
 
    saveRDS(pve_results, file.path(anls_info_dir, paste0(PVE_metrics_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds")))
+ } else if (!is.null(cell_embeddings)) {
+   nc <- ncol(used_sce)
+   cn <- colnames(used_sce)
+   emb <- as.matrix(cell_embeddings)
+   if (is.null(rownames(emb))) {
+     if (nrow(emb) != nc) {
+       stop(
+         "cell_embeddings must have rownames matching colnames(used_sce), or nrow = ncol(used_sce) (",
+         nc, "); got nrow ", nrow(emb), "."
+       )
+     }
+     rownames(emb) <- cn
+   } else {
+     m <- match(cn, rownames(emb))
+     if (anyNA(m)) {
+       stop("cell_embeddings rownames must match all colnames(used_sce); ", sum(is.na(m)), " cells unmatched.")
+     }
+     emb <- emb[m, , drop = FALSE]
+   }
+   sid <- SingleCellExperiment::colData(used_sce)$sample_id
+   if (is.null(sid) || length(sid) != nc) {
+     if (!"sample" %in% colnames(SingleCellExperiment::colData(used_sce))) {
+       stop(
+         "Multivariate embedding PVE requires colData 'sample_id' or 'sample' with length ncol(used_sce) (",
+         nc, ")."
+       )
+     }
+     sid <- used_sce$sample
+   }
+   fc <- SingleCellExperiment::colData(used_sce)$fake_condition
+   if (is.null(fc) || length(fc) != nc) {
+     stop("Multivariate embedding PVE requires colData 'fake_condition' with length ncol(used_sce) (", nc, ").")
+   }
+   start_time <- Sys.time()
+   mv_pve_results <- get_mv_PVE_embeddings(
+     emb,
+     sample_id = sid,
+     fake_condition = fc,
+     cluster = clustering_assignment_curr_anls,
+     pc_weights = embedding_pc_weights,
+     max_cells = mv_embed_max_cells,
+     max_pcs = mv_embed_max_pcs,
+     seed = mv_embed_seed
+   )
+   end_time <- Sys.time()
+   print(paste0("Time taken for multivariate embedding PVE: ", end_time - start_time))
+   saveRDS(
+     mv_pve_results,
+     file.path(anls_info_dir, paste0(mv_PVE_metrics_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds"))
+   )
  }
-   ###### first attempt at PCA_Variance_Explained analysis
- # cell_embeddings <- clust_results[[embedding_name]]
- # cluster_id_cells <- cluster_assignment_curr_anls
- # fake_condition_cells <- used_sce$fake_condition
-  # # Compute R^2 for each principal component (PC) regressed on cluster and fake condition
- # get_r2_per_pc <- function(embeddings, predictor) {
- #   # predictor: factor to regress against
- #   apply(embeddings, 2, function(pc_vec) {
- #     mod_full <- summary(lm(pc_vec ~ predictor))
- #     mod_full$r.squared
- #   })
- # }
- # r2_by_cluster <- get_r2_per_pc(cell_embeddings, cluster_id_cells)
- # r2_by_fake_condition <- get_r2_per_pc(cell_embeddings, fake_condition_cells)
 
-
- # genes_DE_lbl_counts <- lblnorm_counts[genes_DE, ]
-
-
- # pca_loadings <- clust_results[[loadings_name]]
-
-
-
-
-
-
-  # # Raw variance of each gene explained by each PC via multivariable lm; partial SS from drop1.
- # pcs <- cell_embeddings[, colnames(pca_loadings), drop = FALSE]
- # gene_pc_r2_matrix <- matrix(NA_real_, nrow = length(genes_DE), ncol = ncol(pca_loadings),
- #                             dimnames = list(genes_DE, colnames(pca_loadings)))
- # for (gene in genes_DE) {
- #   print(paste0("Running analysis for gene: ", gene))
- #   y <- as.numeric(genes_DE_lbl_counts[gene, ])
- #   ok <- stats::complete.cases(y, pcs)
- #   if (sum(ok) < 2L) next
- #   fit <- stats::lm(y ~ ., data = data.frame(y = y[ok], pcs[ok, , drop = FALSE]))
- #   drop_tbl <- stats::drop1(fit, scope = ~ ., test = "F")
- #   n_ok <- sum(ok)
- #   var_explained <- drop_tbl[-1L, "Sum of Sq"] / (n_ok - 1L)
- #   gene_pc_r2_matrix[gene, names(var_explained)] <- var_explained
- # }
-
-
- 
  return(list(res_DE = res_de_curr_anls, de_overlap_info = de_overlap_info_curr_anls))
+}
+
+
+#' Multivariate embedding variance explained (cluster vs condition)
+#'
+#' Uses multivariate \code{lm} (one QR per model) on \code{cells \times PCs} embeddings.
+#' **Sample is not a regressor:** incremental R^2 for cluster uses \code{~ condition}
+#' vs \code{~ condition + cluster}; for condition, \code{~ cluster} vs
+#' \code{~ cluster + condition}. Sample-driven variation therefore remains in the
+#' embedding variance (appropriate when comparing uncorrected PCA to batch-corrected
+#' embeddings). \code{sample_id} is still used for optional stratified subsampling.
+#' Per-PC increments are combined with normalized \code{pc_weights} (default: column variances).
+#'
+#' @param embeddings Numeric matrix, cells \eqn{\times} PCs (e.g. PCA or Harmony).
+#' @param sample_id,fake_condition,cluster Vectors of length \code{nrow(embeddings)}.
+#'   \code{sample_id} must be non-missing when \code{max_cells} is finite (stratified subsample).
+#' @param pc_weights Optional nonnegative weights (e.g. squared PCA standard deviations).
+#'   If \code{NULL}, uses column variances of \code{embeddings}.
+#' @param max_cells If finite, stratified subsample by \code{sample_id} to at most this size.
+#' @param max_pcs Use only the first \code{max_pcs} columns of \code{embeddings}.
+#' @param seed Optional RNG seed when subsampling.
+#'
+#' @return A list with \code{mv_tPVE} and \code{mv_sPVE} (scalars), \code{per_pc} (matrix of
+#'   incremental R^2 and TSS per dimension), \code{weights_used} (normalized), and
+#'   \code{meta} (\code{n_cells}, \code{n_cells_used}, \code{n_pcs_used}, etc.).
+#'
+#' @importFrom stats complete.cases lm residuals as.formula var
+#' @export
+get_mv_PVE_embeddings <- function(embeddings, sample_id, fake_condition, cluster,
+                                  pc_weights = NULL, max_cells = Inf, max_pcs = Inf,
+                                  seed = NULL) {
+ stratified_subsample_rows <- function(strata, max_n, seed_local) {
+   n <- length(strata)
+   if (!is.finite(max_n) || max_n >= n) {
+     return(seq_len(n))
+   }
+   if (!is.null(seed_local)) {
+     set.seed(seed_local)
+   }
+   idx <- integer(0)
+   for (nm in unique(as.character(strata))) {
+     w <- which(as.character(strata) == nm)
+     n_take <- max(1L, floor(max_n * length(w) / n))
+     n_take <- min(n_take, length(w))
+     idx <- c(idx, sample(w, n_take))
+   }
+   if (length(idx) > max_n) {
+     sample(idx, max_n)
+   } else {
+     idx
+   }
+ }
+
+ Y <- as.matrix(embeddings)
+ if (!is.numeric(Y)) {
+   stop("embeddings must be numeric.")
+ }
+ p_full <- ncol(Y)
+ if (p_full < 1L) {
+   stop("embeddings must have at least one column.")
+ }
+ max_pcs <- min(max_pcs, p_full)
+ Y <- Y[, seq_len(max_pcs), drop = FALSE]
+ colnames(Y) <- paste0("PC", seq_len(max_pcs))
+
+ cd <- data.frame(
+   sample_id = factor(sample_id),
+   fake_condition = factor(fake_condition),
+   cluster = factor(cluster),
+   stringsAsFactors = FALSE
+ )
+ if (nrow(Y) != nrow(cd)) {
+   stop("nrow(embeddings) must match length(sample_id).")
+ }
+ ok <- stats::complete.cases(Y) & stats::complete.cases(cd[c("fake_condition", "cluster")])
+ if (is.finite(max_cells)) {
+   ok <- ok & !is.na(sample_id)
+ }
+ Y <- Y[ok, , drop = FALSE]
+ cd <- cd[ok, , drop = FALSE]
+ n_cells <- sum(ok)
+
+ n_before_sub <- nrow(cd)
+ keep <- stratified_subsample_rows(cd$sample_id, max_cells, seed)
+ Y <- Y[keep, , drop = FALSE]
+ cd <- cd[keep, , drop = FALSE]
+ n_used <- nrow(cd)
+
+ pw <- if (is.null(pc_weights)) {
+   apply(Y, 2L, stats::var)
+ } else {
+   pc_weights <- as.numeric(pc_weights)[seq_len(max_pcs)]
+   if (length(pc_weights) != max_pcs) {
+     stop("pc_weights (after truncation to max_pcs) must have length ", max_pcs, ".")
+   }
+   pc_weights
+ }
+ if (any(!is.finite(pw)) || any(pw < 0)) {
+   stop("pc_weights must be finite and nonnegative.")
+ }
+ pw <- pmax(pw, .Machine$double.eps)
+ w_norm <- pw / sum(pw)
+
+ cn_y <- colnames(Y)
+ rhs0_cls <- "fake_condition"
+ rhs1_cls <- "fake_condition + cluster"
+ f0_cls <- stats::as.formula(paste0("cbind(", paste(cn_y, collapse = ", "), ") ~ ", rhs0_cls))
+ f1_cls <- stats::as.formula(paste0("cbind(", paste(cn_y, collapse = ", "), ") ~ ", rhs1_cls))
+ dat_y <- data.frame(cd, Y, check.names = FALSE)
+ fit0_cls <- stats::lm(f0_cls, data = dat_y)
+ fit1_cls <- stats::lm(f1_cls, data = dat_y)
+ rss0_cls <- colSums(stats::residuals(fit0_cls)^2)
+ rss1_cls <- colSums(stats::residuals(fit1_cls)^2)
+ cm <- colMeans(Y)
+ TSS <- colSums((t(t(Y) - cm))^2)
+ inc_cluster <- (rss0_cls - rss1_cls) / TSS
+ inc_cluster <- pmax(inc_cluster, 0)
+ inc_cluster[!is.finite(TSS) | TSS <= .Machine$double.eps] <- NA_real_
+
+ rhs0_st <- "cluster"
+ rhs1_st <- "cluster + fake_condition"
+ f0_st <- stats::as.formula(paste0("cbind(", paste(cn_y, collapse = ", "), ") ~ ", rhs0_st))
+ f1_st <- stats::as.formula(paste0("cbind(", paste(cn_y, collapse = ", "), ") ~ ", rhs1_st))
+ fit0_st <- stats::lm(f0_st, data = dat_y)
+ fit1_st <- stats::lm(f1_st, data = dat_y)
+ rss0_st <- colSums(stats::residuals(fit0_st)^2)
+ rss1_st <- colSums(stats::residuals(fit1_st)^2)
+ inc_state <- (rss0_st - rss1_st) / TSS
+ inc_state <- pmax(inc_state, 0)
+ inc_state[!is.finite(TSS) | TSS <= .Machine$double.eps] <- NA_real_
+
+ ok_pc <- is.finite(inc_cluster) & is.finite(inc_state) & is.finite(TSS)
+ w_eff <- w_norm
+ mv_t <- if (any(ok_pc)) sum(w_eff[ok_pc] * inc_cluster[ok_pc]) / sum(w_eff[ok_pc]) else NA_real_
+ mv_s <- if (any(ok_pc)) sum(w_eff[ok_pc] * inc_state[ok_pc]) / sum(w_eff[ok_pc]) else NA_real_
+
+ per_pc <- cbind(
+   inc_cluster = inc_cluster,
+   inc_state = inc_state,
+   TSS = TSS,
+   rss0_cluster = rss0_cls,
+   rss1_cluster = rss1_cls,
+   rss0_state = rss0_st,
+   rss1_state = rss1_st
+ )
+ rownames(per_pc) <- cn_y
+
+ list(
+   mv_tPVE = mv_t,
+   mv_sPVE = mv_s,
+   per_pc = per_pc,
+   weights_used = w_norm,
+   meta = list(
+     n_cells_input = length(sample_id),
+     n_cells_complete_cases = n_cells,
+     n_cells_used = n_used,
+     subsampled = is.finite(max_cells) && n_before_sub > max_cells,
+     max_cells = max_cells,
+     n_pcs_used = max_pcs,
+     seed = seed
+   )
+ )
 }
 
 
