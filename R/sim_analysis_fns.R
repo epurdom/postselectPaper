@@ -502,7 +502,7 @@ calc_overlap <- function(clustering_assignment, used_sce, pa_de_int_df, sim_type
 #' @importFrom muscat aggregateData pbDS
 #' @importFrom S4Vectors metadata
 #' @export
-run_mSim_type_DE_analysis <- function(sce, cluster_id_col, sample_id_col, group_id_col, method = "DESeq2") {
+run_mSim_type_DE_analysis <- function(sce, cluster_id_col, sample_id_col, group_id_col, method = "DESeq2", path2save_pb = NULL) {
   print("Assigning cluster, sample and group IDs")
  # Assign cluster, sample and group IDs
  sce$cluster_id <- sce[[cluster_id_col]]
@@ -523,6 +523,10 @@ run_mSim_type_DE_analysis <- function(sce, cluster_id_col, sample_id_col, group_
    fun = "sum",
    by = c("cluster_id", "sample_id")
  )
+ if (!is.null(path2save_pb)) {
+   print(paste0("Saving pseudobulk object to: ", path2save_pb))
+   saveRDS(pseudobulk, path2save_pb)
+ }
 
 
  print("Creating experiment_info data frame")
@@ -596,7 +600,8 @@ run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm
                                      cut_off_true, cut_off_false, sig_threshold, overlap_type, run_PVE = FALSE,
                                      cell_embeddings = NULL, embedding_pc_weights = NULL,
                                      mv_PVE_metrics_save_prfx = "mv_PVE_embed_",
-                                     mv_embed_max_cells = Inf, mv_embed_max_pcs = Inf, mv_embed_seed = NULL) {
+                                     mv_embed_max_cells = Inf, mv_embed_max_pcs = Inf, mv_embed_seed = NULL,
+                                     pb_dir, pb_save_prfx, save_down_pb = FALSE) {
 
 
  print(paste0("Running analysis for clustering: ", curr_anls))
@@ -605,10 +610,15 @@ run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm
  de_overlap_info_curr_anls <- calc_overlap(clustering_assignment_curr_anls, used_sce, pa_de, sim_type)
  saveRDS(de_overlap_info_curr_anls, file.path(anls_info_dir, paste0(de_overlap_info_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds")))
 
-
+if (save_down_pb) {
+  path2save_pb <- file.path(pb_dir, paste0(pb_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds"))
+  print(paste0("Saving pseudobulk object to: ", path2save_pb))
+} else {
+  path2save_pb <- NULL
+}
  print("Running de analysis")
  used_sce$data_cluster <- clustering_assignment_curr_anls
- res_de_curr_anls <- run_mSim_type_DE_analysis(used_sce, "data_cluster", "sample", "fake_condition", method = "edgeR")
+ res_de_curr_anls <- run_mSim_type_DE_analysis(used_sce, "data_cluster", "sample", "fake_condition", method = "edgeR", path2save_pb = path2save_pb)
  saveRDS(res_de_curr_anls, file.path(des_dir, paste0(res_de_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds")))
  combined_sim_res_DE_tested <- adjust_all_pvals(res_de_curr_anls)
  gene_clusts_DE <- combined_sim_res_DE_tested[combined_sim_res_DE_tested$adj_p_val < sig_threshold, ]
