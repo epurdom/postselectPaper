@@ -496,6 +496,7 @@ calc_overlap <- function(clustering_assignment, used_sce, pa_de_int_df, sim_type
 #' @param sample_id_col Character. \code{colData} column name for sample.
 #' @param group_id_col Character. \code{colData} column name for condition/group.
 #' @param method \code{"DESeq2"} or \code{"edgeR"} (passed to \code{muscat::pbDS}). Default \code{"DESeq2"}.
+#' @param path2save_pb Optional character. If not \code{NULL}, path to save the pseudobulk object as RDS.
 #'
 #' @return Data frame: DE table from \code{pbDS} (e.g. \code{res_msct$table[[1]]}).
 #'
