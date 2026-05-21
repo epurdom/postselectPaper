@@ -91,6 +91,8 @@ combine_de_pvals_by_cluster <- function(de_pvals_by_cluster, method = "adjust_al
 #' @param screen_method Character. Screening combination: \code{"min_holm"} (default),
 #'   \code{"fisher"}, or \code{"cauchy"}.
 #' @param n_cores Integer or NULL. Number of cores for parallel index computation; NULL = serial.
+#' 
+#' @param path2pb Character or NULL. Path to pseudobulk data for globaltest screening (if screen_method = "globaltest"). If NULL or file does not exist, globaltest screening will be skipped and NA returned for all adjusted p-values.
 #'
 #' @return A data.frame with columns:
 #'   \itemize{
@@ -107,7 +109,7 @@ combine_de_pvals_by_cluster <- function(de_pvals_by_cluster, method = "adjust_al
 #' @importFrom doParallel registerDoParallel stopImplicitCluster
 #' @importFrom stats na.omit
 #' @keywords internal
-two_stage_adjustment <- function(de_pvals_by_cluster, screen_method = "min_holm", n_cores = NULL) {
+two_stage_adjustment <- function(de_pvals_by_cluster, screen_method = "min_holm", n_cores = NULL, path2pb = NULL) {
   # Combine all p-values from clusters in a gene by cluster matrix
   # Get set of all genes
   all_genes <- unique(unlist(lapply(de_pvals_by_cluster, function(x) x$gene)))
@@ -133,6 +135,18 @@ two_stage_adjustment <- function(de_pvals_by_cluster, screen_method = "min_holm"
         stats::pchisq(chisq, df, lower.tail = FALSE)
       }
       combined_pvals <- my_pvalues_fisher_method(pval_matrix)
+  } else if (screen_method == "stouffer") {
+    # Use Stouffer method to combine p-values per gene
+    my_pvalues_stouffer_method <- function(pvalues) {
+      # TODO Add a check that all pvalues are "valid"
+      pvalues[pvalues == 0] <- 1e-285
+      z_scores <- stats::qnorm(pvalues)
+      z_sum <- rowSums(z_scores, na.rm = TRUE)
+      n <- rowSums(!is.na(pvalues))
+      z_mean <- z_sum / sqrt(n)
+      stats::pnorm(z_mean, lower.tail = FALSE)
+    }
+    combined_pvals <- my_pvalues_stouffer_method(pval_matrix)
   } else if (screen_method == "cauchy") {
       cauchyP <- function(p, w = 1/length(p)) {
         T <- tan((0.5 - p) * pi)
@@ -148,9 +162,18 @@ two_stage_adjustment <- function(de_pvals_by_cluster, screen_method = "min_holm"
         return(min(simes_pvals))
       }
       combined_pvals <- apply(pval_matrix, 1, function(x) simesP(stats::na.omit(x)))
+  } else if (screen_method == "globaltest") {
+    if (is.null(path2pb) | !file.exists(path2pb)) {
+      warning("Path to pseudobulk data not provided or file does not exist. Cannot perform globaltest screening. Returning NA for all adjusted p-values.")
+      combined_pvals <- rep(NA, nrow(pval_matrix))
+    } else {
+      pseudobulk <- readRDS(path2pb)
+      combined_pvals <- compute_gene_globaltest_pvalues(pseudobulk)
+      combined_pvals <- combined_pvals[rownames(pval_matrix)]
+    }
   }
   else {
-    stop("Invalid screen_method specified. Must be one of 'min_holm', 'fisher', 'cauchy', or 'simes'.")
+    stop("Invalid screen_method specified. Must be one of 'min_holm', 'fisher', 'cauchy', 'stouffer', 'globaltest' or 'simes'.")
   }
   screen_pvalues_adj <- p.adjust(combined_pvals, method = "BH")
   # Compute adjusted p-values following 2-stage procedure
@@ -207,4 +230,88 @@ two_stage_adjustment <- function(de_pvals_by_cluster, screen_method = "min_holm"
   res_table$screen_pval <- combined_pvals[res_table$gene]
   res_table$screen_adj_pval <- screen_pvalues_adj[res_table$gene]
   return(res_table)
+}
+
+#' Compute globaltest p-values for each gene across cell types
+#'
+#' For each gene, perform a globaltest to assess association between gene expression
+#' and phenotype across all cell types. Before that, it replicates the default gene and sample filtering
+#' used in the muscat package, normalizes counts and log-transform.
+#'
+#' @param pb A SummarizedExperiment object containing pseudobulk data with assays for each cell type and a 'group_id' column in colData for phenotype.
+#' @return A named numeric vector of globaltest p-values for each gene.
+#' @importFrom edgeR DGEList calcNormFactors cpm filterByExpr
+#' @importFrom SummarizedExperiment assay assayNames colData
+#' @importFrom scater isOutlier
+#' @importFrom globaltest gt p.value
+compute_gene_globaltest_pvalues <- function(pb) {
+  cell_types <- SummarizedExperiment::assayNames(pb)
+  gene_names <- rownames(pb)
+  group_id <- setNames(SummarizedExperiment::colData(pb)$group_id, SummarizedExperiment::colData(pb)$sample)
+  phenotype <- group_id[colnames(pb)]
+  n_samples <- ncol(pb)
+  n_cells <- do.call(cbind, pb@int_colData$n_cells)
+  # Filter out samples/clusters, genes, normalize counts and log-transform
+  normalized_assays <- setNames(lapply(cell_types, function(ct) {
+    y <- pb
+    formula <- ~ group_id
+    cd <- as.data.frame(SummarizedExperiment::colData(pb))
+    design <- model.matrix(formula, cd)
+    colnames(design) <- levels(SummarizedExperiment::colData(pb)$group_id)
+    rmv <- n_cells[ct, ] < 10 # Filter out samples with fewer than 10 cells in this cluster
+    y <- pb[ , !rmv]
+    d <- design[colnames(y), , drop = FALSE]
+    ls <- colSums(SummarizedExperiment::assay(y, ct))
+    ol <- scater::isOutlier(ls, log = TRUE, type = "lower", nmads = 3)
+    d <- d[colnames(y <- y[, !ol]), , drop = FALSE]
+    y <- y[rowSums(SummarizedExperiment::assay(y, ct)) != 0, ]
+    if (ncol(y) == 0 || nrow(y) == 0) {
+      return(matrix(NA_real_, nrow = length(gene_names), ncol = n_samples,
+        dimnames = list(gene_names, colnames(pb))))
+    }
+    if (max(SummarizedExperiment::assay(y, ct)) > 100) {
+      keep <- edgeR::filterByExpr(SummarizedExperiment::assay(y, ct), d) # Filter out genes with low counts across samples using edgeR's filterByExpr function
+      y <- y[keep, ]
+    }
+
+    counts_sub <- SummarizedExperiment::assay(y, ct)
+    if (ncol(counts_sub) == 0 || nrow(counts_sub) == 0) {
+      return(matrix(NA_real_, nrow = length(gene_names), ncol = n_samples,
+        dimnames = list(gene_names, colnames(pb))))
+    }
+
+    dge_sub <- suppressMessages(edgeR::DGEList(counts_sub, remove.zeros = TRUE))
+    dge_sub <- edgeR::calcNormFactors(dge_sub)
+    cpm_sub <- edgeR::cpm(dge_sub, log = TRUE)
+
+    mat_full <- matrix(NA_real_, nrow = length(gene_names), ncol = n_samples,
+      dimnames = list(gene_names, colnames(pb)))
+    if (ncol(cpm_sub) > 0) {
+      mat_full[rownames(cpm_sub), colnames(cpm_sub)] <- cpm_sub
+    }
+    mat_full
+  }), cell_types)
+
+  pvals <- vapply(gene_names, function(g) {
+    Y <- do.call(cbind, lapply(normalized_assays, function(mat) mat[g, ]))
+    colnames(Y) <- cell_types
+    rownames(Y) <- colnames(pb)
+    # if (any(is.na(Y))) print(paste("NA values for gene", g))
+
+    keep <- colSums(!is.na(Y)) > 0
+    if (!any(keep)) return(NA_real_)
+    Y <- Y[, keep, drop = FALSE]
+
+    tryCatch({
+      df_test <- data.frame(phenotype = phenotype, Y)
+      gt_result <- globaltest::gt(phenotype ~ ., data = df_test)
+      globaltest::p.value(gt_result)
+    }, error = function(e) {
+      message("Error in globaltest: ", e$message)
+      NA_real_
+    })
+  }, numeric(1))
+
+  names(pvals) <- gene_names
+  pvals
 }

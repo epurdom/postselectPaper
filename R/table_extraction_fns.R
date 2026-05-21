@@ -13,6 +13,8 @@
 #' @param de_pvals_by_cluster_prefix Character. Filename prefix for DE p-values by cluster RDS.
 #' @param pa_de_save_prfx Character. Filename prefix for \code{pa_de} RDS (contains \code{num_de_genes}).
 #' @param mv_PVE_metrics_save_prfx Character. Filename prefix for multivariate embedding PVE metrics RDS (\code{tPVE}, \code{sPVE} by gene).
+#' @param pb_dir Character. Directory containing pseudobulk RDS files for globaltest screening.
+#' @param pb_prefix Character. Filename prefix for pseudobulk RDS files.
 #'
 #' @return A data.frame with gene-cluster rows, DE results, overlap counts, PVE, and 2-stage
 #'   columns for \code{min_holm}, \code{fisher}, and \code{cauchy}. Returns \code{NULL} if the
@@ -21,7 +23,17 @@
 #' @seealso \code{\link{combine_de_pvals_by_cluster}}, \code{\link{confusion_from_overlap_matrix}}
 #' @importFrom reshape2 melt
 #' @export
-per_sim_data_extraction <- function(id_check_single, phen_type_removal, analysis_results_dir, de_outputs_dir, overlap_matrix_prefix, de_pvals_by_cluster_prefix, pa_de_save_prfx, mv_PVE_metrics_save_prfx) {
+per_sim_data_extraction <- function(
+  id_check_single, 
+  phen_type_removal, 
+  analysis_results_dir, 
+  de_outputs_dir, 
+  overlap_matrix_prefix, 
+  de_pvals_by_cluster_prefix,
+  pa_de_save_prfx, 
+  mv_PVE_metrics_save_prfx,
+  pb_dir,
+  pb_prefix) {
   pa_de_int_fn <- paste0(analysis_results_dir, pa_de_save_prfx, id_check_single, ".rds")
   pa_de_int <- readRDS(pa_de_int_fn)
   num_de_genes <- pa_de_int$num_de_genes
@@ -67,10 +79,14 @@ per_sim_data_extraction <- function(id_check_single, phen_type_removal, analysis
   combined_sim_res_DE_all$mv_tPVE <- mv_PVE_metrics$tPVE[as.character(combined_sim_res_DE_all$gene)]
   combined_sim_res_DE_all$mv_sPVE <- mv_PVE_metrics$sPVE[as.character(combined_sim_res_DE_all$gene)]
 
+  # Build file name for pseudobulk
+  pb_fn <- paste0(pb_dir, pb_prefix, phen_type_removal, id_check_single, ".rds")
 
-  poss_screen_methods <- c("min_holm", "fisher", "cauchy", "simes")
+  poss_screen_methods <- c("min_holm", "fisher", "cauchy", "simes", "globaltest", "stouffer")
+  print("SCREEN METHODS:")
   for (screen_method in poss_screen_methods) {
-    combined_sim_res_DE_2stage <- two_stage_adjustment(sim_res_DE, screen_method = screen_method)
+    print(screen_method)
+    combined_sim_res_DE_2stage <- two_stage_adjustment(sim_res_DE, screen_method = screen_method, path2pb = pb_fn)
     tested_col <- paste0("tested_2stage_", screen_method)
     combined_sim_res_DE_2stage[[tested_col]] <- TRUE
     vals_to_merge_in <- combined_sim_res_DE_2stage[, c("gene", "cluster_id", "adj_p_val_2stage", "screen_pval", "screen_adj_pval", tested_col)]
