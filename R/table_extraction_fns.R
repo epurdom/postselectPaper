@@ -62,10 +62,10 @@ per_sim_data_extraction <- function(id_check_single, phen_type_removal, analysis
   combined_sim_res_DE_all$num_de_genes <- num_de_genes
   
   # add tPVE and sPVE values for each gene
-  mv_PVE_metrics_fn <- paste0(analysis_results_dir, mv_PVE_metrics_save_prfx, phen_type_removal, id_check_single, ".rds")
-  mv_PVE_metrics <- readRDS(mv_PVE_metrics_fn)
-  combined_sim_res_DE_all$mv_tPVE <- mv_PVE_metrics$tPVE[as.character(combined_sim_res_DE_all$gene)]
-  combined_sim_res_DE_all$mv_sPVE <- mv_PVE_metrics$sPVE[as.character(combined_sim_res_DE_all$gene)]
+  # mv_PVE_metrics_fn <- paste0(analysis_results_dir, mv_PVE_metrics_save_prfx, phen_type_removal, id_check_single, ".rds")
+  # mv_PVE_metrics <- readRDS(mv_PVE_metrics_fn)
+  # combined_sim_res_DE_all$mv_tPVE <- mv_PVE_metrics$tPVE
+  # combined_sim_res_DE_all$mv_sPVE <- mv_PVE_metrics$sPVE
 
 
   poss_screen_methods <- c("min_holm", "fisher", "cauchy", "simes")
@@ -160,6 +160,7 @@ get_conf_metrics_tested_all_hypotheses <- function(master_pwr_table_used, sig_th
     FN = sum(.data$FN, na.rm = TRUE),
     FP = sum(.data$FP, na.rm = TRUE),
     FN_all = sum(.data$FN_all, na.rm = TRUE),
+
     sPVE_avg_found_DE = if (sum(.data$found_DE, na.rm = TRUE) > 0) mean(.data$sPVE[.data$found_DE], na.rm = TRUE) else NA_real_,
     tPVE_avg_found_DE = if (sum(.data$found_DE, na.rm = TRUE) > 0) mean(.data$tPVE[.data$found_DE], na.rm = TRUE) else NA_real_,
     num_tested_hypotheses = sum(!.data$not_tested),
