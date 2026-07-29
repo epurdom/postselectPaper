@@ -1,6 +1,6 @@
 Package: postselect
 Title: Code for running simulation
-Version: 0.0.0.9000
+Version: 0.2
 Author: Nicolas Sanchez, Lucas Etourneau, Elizabeth Purdom
 Maintainer: Nicolas Sanchez <nicolas.sanchez.ep@berkeley.edu>
 Authors@R: 
