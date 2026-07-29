@@ -144,7 +144,7 @@ two_stage_adjustment <- function(de_pvals_by_cluster, screen_method = "min_holm"
       z_sum <- rowSums(z_scores, na.rm = TRUE)
       n <- rowSums(!is.na(pvalues))
       z_mean <- z_sum / sqrt(n)
-      stats::pnorm(z_mean, lower.tail = FALSE)
+      stats::pnorm(z_mean, lower.tail = FALSE) #TODO: lower.tail should be true
     }
     combined_pvals <- my_pvalues_stouffer_method(pval_matrix)
   } else if (screen_method == "cauchy") {

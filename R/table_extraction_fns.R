@@ -81,8 +81,12 @@ per_sim_data_extraction <- function(
 
   # Build file name for pseudobulk
   pb_fn <- paste0(pb_dir, pb_prefix, phen_type_removal, id_check_single, ".rds")
-
   poss_screen_methods <- c("min_holm", "fisher", "cauchy", "simes", "globaltest", "stouffer")
+  if (!file.exists(pb_fn)) {
+    message("Pseudobulk file does not exist; skipping globaltest: ", pb_fn)
+    poss_screen_methods <- setdiff(poss_screen_methods, "globaltest")
+  }
+
   print("SCREEN METHODS:")
   for (screen_method in poss_screen_methods) {
     print(screen_method)
