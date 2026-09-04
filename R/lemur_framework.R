@@ -1,10 +1,46 @@
-
+#' Run fastMNN on a \code{SingleCellExperiment} built like \code{sim_analysis_pipeline.R}
+#' (normalized expression in \code{logcounts}, batch by sample).
+#'
+#' @return Numeric matrix of corrected coordinates (cells x dimensions).
+#'
+#' @keywords internal
+#' @noRd
+.prep_aug_sim_fastmnn_embeddings <- function(seurat_obj, sce_alt, sample_covariate) {
+  if (is.null(sce_alt)) {
+    cnts <- Seurat::GetAssayData(seurat_obj, assay = "RNA", layer = "counts")
+    dat <- Seurat::GetAssayData(seurat_obj, assay = "RNA", layer = "data")
+    cd <- S4Vectors::DataFrame(seurat_obj@meta.data)
+    sce_fmnn <- SingleCellExperiment::SingleCellExperiment(
+      assays = list(counts = cnts, logcounts = dat),
+      colData = cd
+    )
+  } else {
+    sce_fmnn <- sce_alt
+    SummarizedExperiment::assay(sce_fmnn, "logcounts", withDimnames = FALSE) <-
+      Seurat::GetAssayData(seurat_obj, assay = "RNA", layer = "data")
+  }
+  cd_fmnn <- SummarizedExperiment::colData(sce_fmnn)
+  if (!sample_covariate %in% colnames(cd_fmnn)) {
+    stop("sample_covariate '", sample_covariate, "' not found in colData for fastMNN batch.")
+  }
+  bat <- cd_fmnn[[sample_covariate]]
+  fmnn_out <- batchelor::fastMNN(
+    sce_fmnn,
+    batch = bat,
+    BSPARAM = BiocSingular::RandomParam()
+  )
+  SummarizedExperiment::assay(fmnn_out, "counts", withDimnames = FALSE) <-
+    SummarizedExperiment::assay(sce_fmnn, "counts")
+  SummarizedExperiment::assay(fmnn_out, "logcounts", withDimnames = FALSE) <-
+    SummarizedExperiment::assay(sce_fmnn, "logcounts")
+  SingleCellExperiment::reducedDim(fmnn_out, "corrected")
+}
 
 #' Prepare data for augmented simulation
 #'
 #' Prepares data for augmented simulation by processing a \code{SingleCellExperiment}
 #' or using a pre-processed Seurat object. Performs normalization, dimensionality
-#' reduction (PCA), and optional batch correction via Harmony. Optionally saves
+#' reduction (PCA), and optional batch correction via Harmony or fastMNN. Optionally saves
 #' the processed Seurat object to disk.
 #'
 #' @param seed Optional integer. Random seed for reproducibility. If \code{NULL}, seed is not set.
@@ -16,21 +52,28 @@
 #' @param datapath Character. Path to input RDS (SingleCellExperiment). Required when \code{processed_sim} is \code{NULL}.
 #' @param dest_file Optional character. Path to save the processed Seurat object. If \code{NULL}, object is not saved.
 #' @param condition Optional character vector. Value(s) of \code{main_covariate} to filter cells; if \code{NULL}, all cells used.
-#' @param use_harmony Logical. Whether to run Harmony batch correction.
+#' @param use_harmony Logical. Whether to run Harmony batch correction when \code{embedding_correction} is \code{NULL}.
 #' @param leiden_resolution Optional numeric. Resolution for Leiden when \code{clustering == "leiden"}.
 #' @param leiden_clusters Optional integer vector. Precomputed Leiden cluster labels when \code{clustering == "leiden"}.
 #' @param main_covariate Character. Name of condition/treatment column in \code{colData}.
-#' @param sample_covariate Character. Name of sample column (and for Harmony).
+#' @param sample_covariate Character. Name of sample column (and for Harmony / fastMNN batch).
 #' @param assay_continuous Character. Assay name used for variance (e.g. HVG selection).
 #' @param cell_type_column Character. Name of cell type column (used when \code{clustering == "celltype"}).
 #' @param batch_covariate Character. Name of batch column (for Harmony).
 #' @param processed_sim Optional pre-processed Seurat object; if provided, \code{datapath} is not used.
 #' @param num_pcs Integer. Number of principal components to compute (default \code{50}).
 #' @param verbose Logical. If \code{TRUE}, print debug messages (default \code{TRUE}).
+#' @param embedding_correction Optional character. If \code{NULL} (default), behavior follows \code{use_harmony}:
+#'   Harmony embeddings when \code{TRUE}, PCA when \code{FALSE}. If \code{"no_correction"}, \code{"harmony"},
+#'   or \code{"fastMNN"}, this choice supersedes \code{use_harmony} for which reduction is computed and returned
+#'   in \code{pca_embeds}. fastMNN uses \code{batchelor::fastMNN} with \code{batch = colData[[sample_covariate]]}
+#'   and normalized RNA in \code{logcounts}, analogous to the FMNN block in the simulation pipeline.
 #'
 #' @return A list with all input parameters (possibly updated) plus:
 #'   \itemize{
-#'     \item \code{pca_embeds}: Matrix of PCA (or Harmony) embeddings, cells in columns.
+#'     \item \code{pca_embeds}: Matrix of embeddings (PCA, Harmony, or fastMNN \code{corrected}), cells in columns.
+#'     \item \code{embedding_correction}: Character giving the correction applied: \code{"harmony"},
+#'       \code{"no_correction"}, or \code{"fastMNN"}.
 #'     \item \code{sample}: Sample ID per cell.
 #'     \item \code{nc}: Number of cells.
 #'     \item \code{sf}: Cell size factors (library size / median).
@@ -38,9 +81,13 @@
 #'
 #' @importFrom Matrix colSums
 #' @importFrom Seurat CreateSeuratObject AddMetaData NormalizeData FindVariableFeatures
-#'   ScaleData RunPCA FindNeighbors FindClusters Idents Embeddings
-#' @importFrom SingleCellExperiment counts
+#'   ScaleData RunPCA FindNeighbors FindClusters Idents Embeddings GetAssayData
+#'   CreateDimReducObject DefaultAssay
+#' @importFrom SingleCellExperiment counts SingleCellExperiment reducedDim
 #' @importFrom SummarizedExperiment colData assay
+#' @importFrom S4Vectors DataFrame
+#' @importFrom batchelor fastMNN
+#' @importFrom BiocSingular RandomParam
 #' @importFrom harmony RunHarmony
 #' @importFrom MatrixGenerics rowVars
 #' @importFrom stats kmeans rnorm rnbinom runif median
@@ -65,7 +112,8 @@ prep_aug_sim <- function(seed = NULL,
                         batch_covariate,
                         processed_sim = NULL,
                         num_pcs = 50,
-                        verbose = TRUE) {
+                        verbose = TRUE,
+                        embedding_correction = NULL) {
   # Function to print debug info only when verbose is TRUE
   debug_print <- function(...) {
     if (verbose) {
@@ -103,9 +151,20 @@ prep_aug_sim <- function(seed = NULL,
     debug_print(paste("Using provided lfc_mean:", lfc_mean))
   }
 
+  if (!is.null(embedding_correction)) {
+    resolved_correction <- match.arg(embedding_correction, c("no_correction", "harmony", "fastMNN"))
+  } else {
+    resolved_correction <- if (use_harmony) "harmony" else "no_correction"
+  }
+  debug_print(paste("Embedding correction:", resolved_correction))
+
   # ---------------------------------------
 
+  loaded_from_datapath <- FALSE
+  sce_for_fmnn <- NULL
+
   if (is.null(processed_sim)) {
+    loaded_from_datapath <- TRUE
     debug_print("No pre-processed simulation data provided, loading from file")
     sce <- readRDS(datapath)
     debug_print(paste("Loading the file:", datapath))
@@ -163,14 +222,11 @@ prep_aug_sim <- function(seed = NULL,
       cut_at <- c(num_leiden_clusters)
       debug_print("Leiden clustering complete")
     }
-    if (use_harmony) {
+    if (resolved_correction == "harmony") {
       debug_print("Running Harmony")
       processed_sim <- harmony::RunHarmony(processed_sim, group.by.vars = c(sample_covariate, batch_covariate))
     }
-    if (!is.null(dest_file)) {
-      debug_print(paste("Saving processed Seurat object to:", dest_file))
-      saveRDS(processed_sim, dest_file)
-    }
+    sce_for_fmnn <- sce
   } else {
     debug_print("Using pre-processed Seurat object")
     if (clustering_method == "leiden") {
@@ -185,8 +241,25 @@ prep_aug_sim <- function(seed = NULL,
     }
   }
 
-  if (use_harmony) {
+  if (resolved_correction == "fastMNN") {
+    debug_print("Running fastMNN (batchelor::fastMNN)")
+    corr_emb <- .prep_aug_sim_fastmnn_embeddings(processed_sim, sce_for_fmnn, sample_covariate)
+    processed_sim[["corrected"]] <- CreateDimReducObject(
+      embeddings = corr_emb,
+      key = "corrected_",
+      assay = DefaultAssay(processed_sim)
+    )
+  }
+
+  if (!is.null(dest_file) && loaded_from_datapath) {
+    debug_print(paste("Saving processed Seurat object to:", dest_file))
+    saveRDS(processed_sim, dest_file)
+  }
+
+  if (resolved_correction == "harmony") {
     pca <- list(embedding = t(Embeddings(processed_sim, reduction = "harmony")))
+  } else if (resolved_correction == "fastMNN") {
+    pca <- list(embedding = t(Embeddings(processed_sim, reduction = "corrected")))
   } else {
     pca <- list(embedding = t(Embeddings(processed_sim, reduction = "pca")))
   }
@@ -206,6 +279,7 @@ prep_aug_sim <- function(seed = NULL,
     dest_file = dest_file,
     condition = condition,
     use_harmony = use_harmony,
+    embedding_correction = resolved_correction,
     leiden_resolution = leiden_resolution,
     leiden_clusters = leiden_clusters,
     main_covariate = main_covariate,

@@ -657,55 +657,56 @@ if (save_down_pb) {
 
    saveRDS(pve_results, file.path(anls_info_dir, paste0(PVE_metrics_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds")))
  } else if (!is.null(cell_embeddings)) {
-   nc <- ncol(used_sce)
-   cn <- colnames(used_sce)
-   emb <- as.matrix(cell_embeddings)
-   if (is.null(rownames(emb))) {
-     if (nrow(emb) != nc) {
-       stop(
-         "cell_embeddings must have rownames matching colnames(used_sce), or nrow = ncol(used_sce) (",
-         nc, "); got nrow ", nrow(emb), "."
-       )
-     }
-     rownames(emb) <- cn
-   } else {
-     m <- match(cn, rownames(emb))
-     if (anyNA(m)) {
-       stop("cell_embeddings rownames must match all colnames(used_sce); ", sum(is.na(m)), " cells unmatched.")
-     }
-     emb <- emb[m, , drop = FALSE]
-   }
-   sid <- SingleCellExperiment::colData(used_sce)$sample_id
-   if (is.null(sid) || length(sid) != nc) {
-     if (!"sample" %in% colnames(SingleCellExperiment::colData(used_sce))) {
-       stop(
-         "Multivariate embedding PVE requires colData 'sample_id' or 'sample' with length ncol(used_sce) (",
-         nc, ")."
-       )
-     }
-     sid <- used_sce$sample
-   }
-   fc <- SingleCellExperiment::colData(used_sce)$fake_condition
-   if (is.null(fc) || length(fc) != nc) {
-     stop("Multivariate embedding PVE requires colData 'fake_condition' with length ncol(used_sce) (", nc, ").")
-   }
-   start_time <- Sys.time()
-   mv_pve_results <- get_mv_PVE_embeddings(
-     emb,
-     sample_id = sid,
-     fake_condition = fc,
-     cluster = clustering_assignment_curr_anls,
-     pc_weights = embedding_pc_weights,
-     max_cells = mv_embed_max_cells,
-     max_pcs = mv_embed_max_pcs,
-     seed = mv_embed_seed
-   )
-   end_time <- Sys.time()
-   print(paste0("Time taken for multivariate embedding PVE: ", end_time - start_time))
-   saveRDS(
-     mv_pve_results,
-     file.path(anls_info_dir, paste0(mv_PVE_metrics_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds"))
-   )
+  print("Not running multivariate embedding PVE analysis") 
+#    nc <- ncol(used_sce)
+#    cn <- colnames(used_sce)
+#    emb <- as.matrix(cell_embeddings)
+#    if (is.null(rownames(emb))) {
+#      if (nrow(emb) != nc) {
+#        stop(
+#          "cell_embeddings must have rownames matching colnames(used_sce), or nrow = ncol(used_sce) (",
+#          nc, "); got nrow ", nrow(emb), "."
+#        )
+#      }
+#      rownames(emb) <- cn
+#    } else {
+#      m <- match(cn, rownames(emb))
+#      if (anyNA(m)) {
+#        stop("cell_embeddings rownames must match all colnames(used_sce); ", sum(is.na(m)), " cells unmatched.")
+#      }
+#      emb <- emb[m, , drop = FALSE]
+#    }
+#    sid <- SingleCellExperiment::colData(used_sce)$sample_id
+#    if (is.null(sid) || length(sid) != nc) {
+#      if (!"sample" %in% colnames(SingleCellExperiment::colData(used_sce))) {
+#        stop(
+#          "Multivariate embedding PVE requires colData 'sample_id' or 'sample' with length ncol(used_sce) (",
+#          nc, ")."
+#        )
+#      }
+#      sid <- used_sce$sample
+#    }
+#    fc <- SingleCellExperiment::colData(used_sce)$fake_condition
+#    if (is.null(fc) || length(fc) != nc) {
+#      stop("Multivariate embedding PVE requires colData 'fake_condition' with length ncol(used_sce) (", nc, ").")
+#    }
+#    start_time <- Sys.time()
+#    mv_pve_results <- get_mv_PVE_embeddings(
+#      emb,
+#      sample_id = sid,
+#      fake_condition = fc,
+#      cluster = clustering_assignment_curr_anls,
+#      pc_weights = embedding_pc_weights,
+#      max_cells = mv_embed_max_cells,
+#      max_pcs = mv_embed_max_pcs,
+#      seed = mv_embed_seed
+#    )
+#    end_time <- Sys.time()
+#    print(paste0("Time taken for multivariate embedding PVE: ", end_time - start_time))
+#    saveRDS(
+#      mv_pve_results,
+#      file.path(anls_info_dir, paste0(mv_PVE_metrics_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds"))
+#    )
  }
 
  return(list(res_DE = res_de_curr_anls, de_overlap_info = de_overlap_info_curr_anls))

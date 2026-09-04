@@ -24,7 +24,8 @@ prep_aug_sim(
   batch_covariate,
   processed_sim = NULL,
   num_pcs = 50,
-  verbose = TRUE
+  verbose = TRUE,
+  embedding_correction = NULL
 )
 }
 \arguments{
@@ -46,7 +47,7 @@ prep_aug_sim(
 
 \item{condition}{Optional character vector. Value(s) of \code{main_covariate} to filter cells; if \code{NULL}, all cells used.}
 
-\item{use_harmony}{Logical. Whether to run Harmony batch correction.}
+\item{use_harmony}{Logical. Whether to run Harmony batch correction when \code{embedding_correction} is \code{NULL}.}
 
 \item{leiden_resolution}{Optional numeric. Resolution for Leiden when \code{clustering == "leiden"}.}
 
@@ -54,7 +55,7 @@ prep_aug_sim(
 
 \item{main_covariate}{Character. Name of condition/treatment column in \code{colData}.}
 
-\item{sample_covariate}{Character. Name of sample column (and for Harmony).}
+\item{sample_covariate}{Character. Name of sample column (and for Harmony / fastMNN batch).}
 
 \item{assay_continuous}{Character. Assay name used for variance (e.g. HVG selection).}
 
@@ -67,11 +68,19 @@ prep_aug_sim(
 \item{num_pcs}{Integer. Number of principal components to compute (default \code{50}).}
 
 \item{verbose}{Logical. If \code{TRUE}, print debug messages (default \code{TRUE}).}
+
+\item{embedding_correction}{Optional character. If \code{NULL} (default), behavior follows \code{use_harmony}:
+Harmony embeddings when \code{TRUE}, PCA when \code{FALSE}. If \code{"no_correction"}, \code{"harmony"},
+or \code{"fastMNN"}, this choice supersedes \code{use_harmony} for which reduction is computed and returned
+in \code{pca_embeds}. fastMNN uses \code{batchelor::fastMNN} with \code{batch = colData[[sample_covariate]]}
+and normalized RNA in \code{logcounts}, analogous to the FMNN block in the simulation pipeline.}
 }
 \value{
 A list with all input parameters (possibly updated) plus:
 \itemize{
-\item \code{pca_embeds}: Matrix of PCA (or Harmony) embeddings, cells in columns.
+\item \code{pca_embeds}: Matrix of embeddings (PCA, Harmony, or fastMNN \code{corrected}), cells in columns.
+\item \code{embedding_correction}: Character giving the correction applied: \code{"harmony"},
+\code{"no_correction"}, or \code{"fastMNN"}.
 \item \code{sample}: Sample ID per cell.
 \item \code{nc}: Number of cells.
 \item \code{sf}: Cell size factors (library size / median).
@@ -80,6 +89,6 @@ A list with all input parameters (possibly updated) plus:
 \description{
 Prepares data for augmented simulation by processing a \code{SingleCellExperiment}
 or using a pre-processed Seurat object. Performs normalization, dimensionality
-reduction (PCA), and optional batch correction via Harmony. Optionally saves
+reduction (PCA), and optional batch correction via Harmony or fastMNN. Optionally saves
 the processed Seurat object to disk.
 }
