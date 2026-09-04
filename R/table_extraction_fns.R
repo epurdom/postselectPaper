@@ -61,6 +61,7 @@ per_sim_data_extraction <- function(id_check_single, phen_type_removal, analysis
   combined_sim_res_DE_all$phen_type_removal <- phen_type_removal
   combined_sim_res_DE_all$num_de_genes <- num_de_genes
   
+  
   # add tPVE and sPVE values for each gene
   # mv_PVE_metrics_fn <- paste0(analysis_results_dir, mv_PVE_metrics_save_prfx, phen_type_removal, id_check_single, ".rds")
   # mv_PVE_metrics <- readRDS(mv_PVE_metrics_fn)
@@ -280,5 +281,228 @@ get_conf_metrics_tested_by_gene <- function(master_pwr_table_used, sig_threshold
   conf_metrics_tested$ov_POWER <- ifelse(denom_ov_power > 0, conf_metrics_tested$ov_TP / denom_ov_power, NA_real_)
   denom_ov_fdp <- conf_metrics_tested$ov_FP + conf_metrics_tested$ov_TP
   conf_metrics_tested$ov_FDP <- ifelse(denom_ov_fdp > 0, conf_metrics_tested$ov_FP / denom_ov_fdp, 0)
+  return(conf_metrics_tested)
+}
+
+
+#' Compute gene-level detection status across clusters (per simulation and gene)
+#'
+#' Aggregates gene-cluster rows to one row per \code{id_check} and \code{gene},
+#' recording whether the gene was called DE in any cluster, whether it was truly
+#' DE in any tested cluster and in any cluster, max overlap, and related summaries.
+#' Returns only genes that are DE under \code{gene_de_all} or \code{gene_de_tested}.
+#'
+#' @param master_pwr_table_used Data frame with at least \code{id_check}, \code{gene},
+#'   \code{overlap_count}, \code{gt_nbhd_count}, \code{found_cluster_count}, \code{num_de_genes},
+#'   and columns for screening and DE p-values (see \code{screen_p_val_col_name}, \code{p_val_col_name}).
+#' @param sig_threshold_fixed Numeric. Significance threshold (alpha) for DE decisions.
+#' @param screen_p_val_col_name Character. Column name for screening p-value. Default \code{"adj_p_val"}.
+#' @param p_val_col_name Character. Column name for DE-test p-value (cluster-level). Default \code{"adj_p_val"}.
+#' @param overlap_def Character. Overlap denominator: \code{"union"} (default), \code{"clust"}, or \code{"gt"}.
+#' @param cut_off_true Numeric. Gene-cluster pairs with \code{perc_overlap > cut_off_true} are truly DE. Default 0.
+#' @param cut_off_false Numeric. Gene-cluster pairs with \code{perc_overlap <= cut_off_false} are not DE. Default 0.
+#'
+#' @return A data frame with one row per \code{id_check} and \code{gene} among DE genes,
+#'   with columns \code{gene_detected}, \code{gene_de_tested}, \code{gene_de_all},
+#'   \code{num_tested_clusters}, \code{num_all_clusters}, \code{max_overlap},
+#'   \code{max_overlap_tested}, \code{min_screen_p_val}, \code{num_de_genes}.
+#'
+#' @seealso \code{\link{get_conf_metrics_tested_by_gene}}, \code{\link{get_conf_metrics_tested_all_hypotheses}}
+#' @importFrom dplyr group_by summarize first n
+#' @export
+get_conf_metrics_tested_by_gene_detection <- function(master_pwr_table_used, sig_threshold_fixed, screen_p_val_col_name = "adj_p_val", p_val_col_name = "adj_p_val", overlap_def = "union", cut_off_true = 0.00, cut_off_false = 0.00) {
+  if (overlap_def == "union") {
+    denom_overlap_count <- master_pwr_table_used$gt_nbhd_count + master_pwr_table_used$found_cluster_count - master_pwr_table_used$overlap_count
+    master_pwr_table_used$perc_overlap <- master_pwr_table_used$overlap_count / denom_overlap_count
+  } else if (overlap_def == "clust") {
+    denom_overlap_count <- master_pwr_table_used$found_cluster_count
+    master_pwr_table_used$perc_overlap <- master_pwr_table_used$overlap_count / denom_overlap_count
+  } else if (overlap_def == "gt") {
+    denom_overlap_count <- master_pwr_table_used$gt_nbhd_count
+    master_pwr_table_used$perc_overlap <- master_pwr_table_used$overlap_count / denom_overlap_count
+  } else {
+    stop("Invalid overlap definition")
+  }
+
+  master_pwr_table_used$screen_p_val <- master_pwr_table_used[[screen_p_val_col_name]]
+
+  # for genes where no overlap was provided, the percent overlap is 0
+  master_pwr_table_used$perc_overlap[is.na(master_pwr_table_used$perc_overlap)] <- 0
+
+  master_pwr_table_used$not_tested <- is.na(master_pwr_table_used[[p_val_col_name]])
+  master_pwr_table_used[[p_val_col_name]][is.na(master_pwr_table_used[[p_val_col_name]])] <- 1
+
+  # genes are DE (tested) when overlap > cut_off_true and were tested
+  master_pwr_table_used$is_DE_tested <- master_pwr_table_used$perc_overlap > cut_off_true & !master_pwr_table_used$not_tested
+  # genes are DE (all) when overlap > cut_off_true, regardless of tested
+  master_pwr_table_used$is_DE_all <- master_pwr_table_used$perc_overlap > cut_off_true
+
+  # genes are not DE when the overlap is less than the false cutoff
+  master_pwr_table_used$is_not_DE <- master_pwr_table_used$perc_overlap <= cut_off_false
+
+  # genes are found to be DE when the p-value is less than the significance threshold
+  master_pwr_table_used$found_DE <- master_pwr_table_used[[p_val_col_name]] <= sig_threshold_fixed
+
+  message("Calculating gene-level detection metrics - over all clusters for a given simulation and gene")
+  gene_level_agg <- dplyr::summarize(
+    dplyr::group_by(master_pwr_table_used, .data$id_check, .data$gene),
+    gene_detected = any(.data$found_DE),
+    gene_de_tested = any(.data$is_DE_tested),
+    gene_de_all = any(.data$is_DE_all),
+    num_tested_clusters = sum(!.data$not_tested),
+    num_all_clusters = dplyr::n(),
+    max_overlap = max(.data$perc_overlap, na.rm = TRUE),
+    max_overlap_tested = {
+      ov_tested <- .data$perc_overlap[!.data$not_tested]
+      if (length(ov_tested) == 0L) NA_real_ else max(ov_tested, na.rm = TRUE)
+    },
+    min_screen_p_val = min(.data$screen_p_val, na.rm = TRUE),
+    num_de_genes = dplyr::first(.data$num_de_genes),
+    .groups = "drop"
+  )
+  gene_level_agg <- gene_level_agg[gene_level_agg$gene_de_all | gene_level_agg$gene_de_tested, ]
+  return(gene_level_agg)
+}
+
+
+
+get_conf_metrics_tested_by_gene_detection <- function(master_pwr_table_used, sig_threshold_fixed, screen_p_val_col_name = "adj_p_val", p_val_col_name = "adj_p_val", overlap_def = "union", cut_off_true = 0.00, cut_off_false = 0.00) {
+  if (overlap_def == "union") {
+    denom_overlap_count <- master_pwr_table_used$gt_nbhd_count + master_pwr_table_used$found_cluster_count - master_pwr_table_used$overlap_count
+    master_pwr_table_used$perc_overlap <- master_pwr_table_used$overlap_count / denom_overlap_count
+  } else if (overlap_def == "clust") {
+    denom_overlap_count <- master_pwr_table_used$found_cluster_count
+    master_pwr_table_used$perc_overlap <- master_pwr_table_used$overlap_count / denom_overlap_count
+  } else if (overlap_def == "gt") {
+    denom_overlap_count <- master_pwr_table_used$gt_nbhd_count
+    master_pwr_table_used$perc_overlap <- master_pwr_table_used$overlap_count / denom_overlap_count
+  } else {
+    stop("Invalid overlap definition")
+  }
+
+  master_pwr_table_used$screen_p_val <- master_pwr_table_used[[screen_p_val_col_name]]
+
+  # for genes where no overlap was provided, the percent overlap is 0
+  master_pwr_table_used$perc_overlap[is.na(master_pwr_table_used$perc_overlap)] <- 0
+
+  master_pwr_table_used$not_tested <- is.na(master_pwr_table_used[[p_val_col_name]])
+  master_pwr_table_used[[p_val_col_name]][is.na(master_pwr_table_used[[p_val_col_name]])] <- 1
+
+  # genes are DE (tested) when overlap > cut_off_true and were tested
+  master_pwr_table_used$is_DE_tested <- master_pwr_table_used$perc_overlap > cut_off_true & !master_pwr_table_used$not_tested
+  # genes are DE (all) when overlap > cut_off_true, regardless of tested
+  master_pwr_table_used$is_DE_all <- master_pwr_table_used$perc_overlap > cut_off_true
+
+  # genes are not DE when the overlap is less than the false cutoff
+  master_pwr_table_used$is_not_DE <- master_pwr_table_used$perc_overlap <= cut_off_false
+
+  # genes are found to be DE when the p-value is less than the significance threshold
+  master_pwr_table_used$found_DE <- master_pwr_table_used[[p_val_col_name]] <= sig_threshold_fixed
+
+  message("Calculating gene-level detection metrics - over all clusters for a given simulation and gene")
+  gene_level_agg <- dplyr::summarize(
+    dplyr::group_by(master_pwr_table_used, .data$id_check, .data$gene),
+    gene_detected = any(.data$found_DE),
+    gene_de_tested = any(.data$is_DE_tested),
+    gene_de_all = any(.data$is_DE_all),
+    num_tested_clusters = sum(!.data$not_tested),
+    num_all_clusters = dplyr::n(),
+    max_overlap = max(.data$perc_overlap, na.rm = TRUE),
+    max_overlap_tested = {
+      ov_tested <- .data$perc_overlap[!.data$not_tested]
+      if (length(ov_tested) == 0L) NA_real_ else max(ov_tested, na.rm = TRUE)
+    },
+    min_screen_p_val = min(.data$screen_p_val, na.rm = TRUE),
+    num_de_genes = dplyr::first(.data$num_de_genes),
+    .groups = "drop"
+  )
+  gene_level_agg <- gene_level_agg[gene_level_agg$gene_de_all | gene_level_agg$gene_de_tested, ]
+  return(gene_level_agg)
+}
+
+
+
+
+#' Compute all-hypothesis (cluster-level) confusion metrics and FDP / POWER
+#'
+#' Computes true/false positives and negatives from a master power table by
+#' defining true DE via overlap percentage and significance via a p-value column.
+#' Aggregates TP, FN, FP, POWER, FDP (and optional PVE averages) per \code{id_check} and \code{cluster_id}.
+#'
+#' @param master_pwr_table_used Data frame with at least \code{id_check}, \code{cluster_id}, \code{overlap_count},
+#'   \code{gt_nbhd_count}, \code{found_cluster_count}, and a p-value column (see \code{p_val_col_name}).
+#'   Optionally \code{sPVE} and \code{tPVE} for average PVE of found DEs.
+#' @param sig_threshold_fixed Numeric. Significance threshold (alpha); findings with p-value below this are "found DE".
+#' @param p_val_col_name Character. Name of the column containing the DE-test p-value (or adjusted p-value). Default \code{"adj_p_val"}.
+#' @param overlap_def Character. Overlap denominator: \code{"union"} (default), \code{"clust"}, or \code{"gt"}.
+#' @param cut_off_true Numeric. Gene-cluster pairs with \code{perc_overlap > cut_off_true} are considered truly DE. Default 0.
+#' @param cut_off_false Numeric. Gene-cluster pairs with \code{perc_overlap <= cut_off_false} are considered not DE. Default 0.
+#'
+#' @return A data frame with one row per \code{id_check}–\code{cluster_id} pair and columns: \code{TP}, \code{FN}, \code{FP},
+#'   \code{FN_all}, \code{POWER}, \code{POWER_all}, \code{FDP}, and optionally \code{sPVE_avg_found_DE},
+#'   \code{tPVE_avg_found_DE}. \code{FN} excludes not-tested; \code{FN_all} includes them. \code{POWER}
+#'   and \code{FDP} are set to \code{NA} or \code{0} when denominators are zero.
+#'
+#' @seealso \code{\link{confusion_from_overlap_matrix}}
+#' @importFrom dplyr group_by summarize
+#' @importFrom rlang .data
+#' @export
+get_conf_metrics_tested_all_hypotheses_by_cluster <- function(master_pwr_table_used, sig_threshold_fixed, p_val_col_name = "adj_p_val", overlap_def = "union", cut_off_true = 0.00, cut_off_false = 0.00) {
+  if (overlap_def == "union") {
+    denom_overlap_count <- master_pwr_table_used$gt_nbhd_count + master_pwr_table_used$found_cluster_count - master_pwr_table_used$overlap_count
+    master_pwr_table_used$perc_overlap <- master_pwr_table_used$overlap_count / denom_overlap_count
+  } else if (overlap_def == "clust") {
+    denom_overlap_count <- master_pwr_table_used$found_cluster_count
+    master_pwr_table_used$perc_overlap <- master_pwr_table_used$overlap_count / denom_overlap_count
+  } else if (overlap_def == "gt") {
+    denom_overlap_count <- master_pwr_table_used$gt_nbhd_count
+    master_pwr_table_used$perc_overlap <- master_pwr_table_used$overlap_count / denom_overlap_count
+  } else {
+    stop("Invalid overlap definition")
+  }
+  master_pwr_table_used$perc_overlap[is.na(master_pwr_table_used$perc_overlap)] <- 0
+  master_pwr_table_used$is_DE <- master_pwr_table_used$perc_overlap > cut_off_true
+  master_pwr_table_used$is_not_DE <- master_pwr_table_used$perc_overlap <= cut_off_false
+  master_pwr_table_used$is_simulated <- grepl("simulated", master_pwr_table_used$gene)
+
+  master_pwr_table_used$not_tested <- is.na(master_pwr_table_used[[p_val_col_name]])
+  master_pwr_table_used[[p_val_col_name]][is.na(master_pwr_table_used[[p_val_col_name]])] <- 1
+  master_pwr_table_used$found_DE <- master_pwr_table_used[[p_val_col_name]] < sig_threshold_fixed
+
+  master_pwr_table_used$TP <- master_pwr_table_used$is_DE & master_pwr_table_used$found_DE
+  master_pwr_table_used$FN <- master_pwr_table_used$is_DE & !master_pwr_table_used$found_DE & !master_pwr_table_used$not_tested
+  master_pwr_table_used$FN_all <- master_pwr_table_used$is_DE & !master_pwr_table_used$found_DE
+
+  master_pwr_table_used$FP <- master_pwr_table_used$is_not_DE & master_pwr_table_used$found_DE
+
+  # if master_pwr_table_used does not have sPVE and tPVE columns, add them
+  if (!("sPVE" %in% colnames(master_pwr_table_used))) {
+    master_pwr_table_used$sPVE <- NA_real_
+  }
+  if (!("tPVE" %in% colnames(master_pwr_table_used))) {
+    master_pwr_table_used$tPVE <- NA_real_
+  }
+
+  conf_metrics_tested <- dplyr::summarize(
+    dplyr::group_by(master_pwr_table_used, .data$id_check, .data$cluster_id),
+    TP = sum(.data$TP, na.rm = TRUE),
+    FN = sum(.data$FN, na.rm = TRUE),
+    FP = sum(.data$FP, na.rm = TRUE),
+    FN_all = sum(.data$FN_all, na.rm = TRUE),
+
+    sPVE_avg_found_DE = if (sum(.data$found_DE, na.rm = TRUE) > 0) mean(.data$sPVE[.data$found_DE], na.rm = TRUE) else NA_real_,
+    tPVE_avg_found_DE = if (sum(.data$found_DE, na.rm = TRUE) > 0) mean(.data$tPVE[.data$found_DE], na.rm = TRUE) else NA_real_,
+    num_tested_hypotheses = sum(!.data$not_tested),
+    num_simulated_hypotheses = sum(.data$is_simulated),
+    num_tested_simulated_hypotheses = sum(.data$is_simulated & !.data$not_tested),
+    num_rows_data = nrow(.data),
+    .groups = "drop"
+  )
+  denom_power <- conf_metrics_tested$TP + conf_metrics_tested$FN
+  conf_metrics_tested$POWER <- ifelse(denom_power > 0, conf_metrics_tested$TP / denom_power, NA_real_)
+  denom_power_all <- conf_metrics_tested$TP + conf_metrics_tested$FN_all
+  conf_metrics_tested$POWER_all <- ifelse(denom_power_all > 0, conf_metrics_tested$TP / denom_power_all, NA_real_)
+  denom_fdp <- conf_metrics_tested$FP + conf_metrics_tested$TP
+  conf_metrics_tested$FDP <- ifelse(denom_fdp > 0, conf_metrics_tested$FP / denom_fdp, 0)
   return(conf_metrics_tested)
 }
