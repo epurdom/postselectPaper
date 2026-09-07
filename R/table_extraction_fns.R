@@ -13,8 +13,8 @@
 #' @param de_pvals_by_cluster_prefix Character. Filename prefix for DE p-values by cluster RDS.
 #' @param pa_de_save_prfx Character. Filename prefix for \code{pa_de} RDS (contains \code{num_de_genes}).
 #' @param mv_PVE_metrics_save_prfx Character. Filename prefix for multivariate embedding PVE metrics RDS (\code{tPVE}, \code{sPVE} by gene).
-#' @param pb_dir Character. Directory containing pseudobulk RDS files for globaltest screening.
-#' @param pb_prefix Character. Filename prefix for pseudobulk RDS files.
+#' @param pb_dir Optional directory containing pseudobulk RDS files for globaltest screening. Default \code{NULL} skips globaltest.
+#' @param pb_prefix Optional filename prefix for those pseudobulk RDS files. Default \code{NULL} skips globaltest.
 #'
 #' @return A data.frame with gene-cluster rows, DE results, overlap counts, PVE, and 2-stage
 #'   columns for \code{min_holm}, \code{fisher}, and \code{cauchy}. Returns \code{NULL} if the
@@ -32,8 +32,8 @@ per_sim_data_extraction <- function(
   de_pvals_by_cluster_prefix,
   pa_de_save_prfx, 
   mv_PVE_metrics_save_prfx,
-  pb_dir,
-  pb_prefix) {
+  pb_dir = NULL,
+  pb_prefix = NULL) {
   pa_de_int_fn <- paste0(analysis_results_dir, pa_de_save_prfx, id_check_single, ".rds")
   pa_de_int <- readRDS(pa_de_int_fn)
   num_de_genes <- pa_de_int$num_de_genes
@@ -80,10 +80,14 @@ per_sim_data_extraction <- function(
   # combined_sim_res_DE_all$mv_tPVE <- mv_PVE_metrics$tPVE
   # combined_sim_res_DE_all$mv_sPVE <- mv_PVE_metrics$sPVE
 
-  # Build file name for pseudobulk
-  pb_fn <- paste0(pb_dir, pb_prefix, phen_type_removal, id_check_single, ".rds")
+  # Build file name for pseudobulk (optional; used only for globaltest)
+  if (is.null(pb_dir) || is.null(pb_prefix)) {
+    pb_fn <- ""
+  } else {
+    pb_fn <- paste0(pb_dir, pb_prefix, phen_type_removal, id_check_single, ".rds")
+  }
   poss_screen_methods <- c("min_holm", "fisher", "cauchy", "simes", "globaltest", "stouffer")
-  if (!file.exists(pb_fn)) {
+  if (!nzchar(pb_fn) || !file.exists(pb_fn)) {
     message("Pseudobulk file does not exist; skipping globaltest: ", pb_fn)
     poss_screen_methods <- setdiff(poss_screen_methods, "globaltest")
   }

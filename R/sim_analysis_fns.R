@@ -588,6 +588,9 @@ run_mSim_type_DE_analysis <- function(sce, cluster_id_col, sample_id_col, group_
 #' @param mv_embed_max_cells If finite, stratified subsample by \code{sample_id} to at most this many cells.
 #' @param mv_embed_max_pcs Maximum number of leading PCs to use.
 #' @param mv_embed_seed Optional seed when subsampling.
+#' @param pb_dir Optional directory for saving muscat pseudobulk RDS when \code{save_down_pb} is \code{TRUE}. Default \code{NULL}.
+#' @param pb_save_prfx Optional filename prefix for those pseudobulk RDS files. Default \code{NULL}.
+#' @param save_down_pb If \code{TRUE}, save the pseudobulk object used for DE. Requires \code{pb_dir} and \code{pb_save_prfx}. Default \code{FALSE}.
 #'
 #' @return A list with \code{res_DE} (DE table) and \code{de_overlap_info} (overlap list).
 #'
@@ -602,7 +605,7 @@ run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm
                                      cell_embeddings = NULL, embedding_pc_weights = NULL,
                                      mv_PVE_metrics_save_prfx = "mv_PVE_embed_",
                                      mv_embed_max_cells = Inf, mv_embed_max_pcs = Inf, mv_embed_seed = NULL,
-                                     pb_dir, pb_save_prfx, save_down_pb = FALSE) {
+                                     pb_dir = NULL, pb_save_prfx = NULL, save_down_pb = FALSE) {
 
 
  print(paste0("Running analysis for clustering: ", curr_anls))
@@ -611,7 +614,10 @@ run_analysis_for_clustering <- function(clustering_assignment_curr_anls, lblnorm
  de_overlap_info_curr_anls <- calc_overlap(clustering_assignment_curr_anls, used_sce, pa_de, sim_type)
  saveRDS(de_overlap_info_curr_anls, file.path(anls_info_dir, paste0(de_overlap_info_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds")))
 
-if (save_down_pb) {
+if (isTRUE(save_down_pb)) {
+  if (is.null(pb_dir) || is.null(pb_save_prfx)) {
+    stop("save_down_pb=TRUE requires pb_dir and pb_save_prfx.")
+  }
   path2save_pb <- file.path(pb_dir, paste0(pb_save_prfx, anls_patterns[[curr_anls]], new_id_check, ".rds"))
   print(paste0("Saving pseudobulk object to: ", path2save_pb))
 } else {
