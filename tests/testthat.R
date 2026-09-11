@@ -3,6 +3,6 @@
 # is used.
 
 library(testthat)
-library(postselect)
+library(scSampleSim)
 
-test_check("postselect")
+test_check("scSampleSim")

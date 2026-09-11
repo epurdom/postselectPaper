@@ -1,4 +1,4 @@
-# postselect
+# scSampleSim
 
 R package for post-selection inference (customize this description).
 
@@ -6,7 +6,7 @@ R package for post-selection inference (customize this description).
 
 ```r
 # From GitHub (after you push):
-# remotes::install_github("your-org/postselectPaper")
+# remotes::install_github("epurdom/scSampleSim")
 ```
 
 ## Development

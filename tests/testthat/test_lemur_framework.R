@@ -68,7 +68,7 @@ test_that("prep_aug_sim and create_augmented_data run with synthetic data and re
     num_pcs = npcs,
     verbose = FALSE
   )
-  pa <- do.call(postselect::prep_aug_sim, args_prep)
+  pa <- do.call(scSampleSim::prep_aug_sim, args_prep)
 
   expect_equal(pa$nc, n_cells)
   expect_gte(nrow(pa$pca_embeds), 1L)
@@ -80,9 +80,9 @@ test_that("prep_aug_sim and create_augmented_data run with synthetic data and re
   # create_augmented_data: 30 DE genes
   n_de_genes <- 30L
   pa$n_de_genes <- n_de_genes
-  args_aug <- pa[names(pa) %in% formalArgs(postselect::create_augmented_data)]
+  args_aug <- pa[names(pa) %in% formalArgs(scSampleSim::create_augmented_data)]
   args_aug$verbose <- FALSE
-  augmented_data <- do.call(postselect::create_augmented_data, args_aug)
+  augmented_data <- do.call(scSampleSim::create_augmented_data, args_aug)
 
   # --- Structure ---
   expect_equal(dim(augmented_data$new_counts), c(n_de_genes, n_cells))
